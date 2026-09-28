@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Status Code Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #00d4ff, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.7rem 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-container {
+            max-width: 400px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-input:focus {
+            border-color: #00d4ff;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .gallery {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .status-card:hover::before {
+            left: 100%;
+        }
+
+        .status-card:hover {
+            transform: translateY(-10px) rotateX(5deg);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .status-code {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .status-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #e8f4fd;
+        }
+
+        .status-description {
+            line-height: 1.6;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-icon {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            opacity: 0.6;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .teapot-card {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24, #ff9ff3);
+            animation: teapotGlow 2s ease-in-out infinite alternate;
+            position: relative;
+        }
+
+        .teapot-card::after {
+            content: '☕';
+            position: absolute;
+            font-size: 4rem;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.1;
+            animation: teapotSpin 4s linear infinite;
+        }
+
+        @keyframes teapotGlow {
+            0% { box-shadow: 0 0 30px rgba(255, 107, 107, 0.5); }
+            100% { box-shadow: 0 0 50px rgba(255, 107, 107, 0.8); }
+        }
+
+        @keyframes teapotSpin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .category-1xx { border-left: 5px solid #3498db; }
+        .category-2xx { border-left: 5px solid #2ecc71; }
+        .category-3xx { border-left: 5px solid #f39c12; }
+        .category-4xx { border-left: 5px solid #e74c3c; }
+        .category-5xx { border-left: 5px solid #9b59b6; }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stats-bar {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .stats-item {
+            display: inline-block;
+            margin: 0 2rem;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            padding: 2rem;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .usage-examples {
+            margin-top: 1rem;
+        }
+
+        .example-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.8rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .gallery { grid-template-columns: 1fr; padding: 1rem; }
+            .status-card { padding: 1.5rem; }
+            .status-code { font-size: 2.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>HTTP Status Code Visualizer</h1>
+        <p>Explore the complete spectrum of HTTP response codes with interactive animations</p>
+        
+        <div class="controls">
+            <button class="filter-btn active" data-filter="all">All Codes</button>
+            <button class="filter-btn" data-filter="1xx">1xx Informational</button>
+            <button class="filter-btn" data-filter="2xx">2xx Success</button>
+            <button class="filter-btn" data-filter="3xx">3xx Redirection</button>
+            <button class="filter-btn" data-filter="4xx">4xx Client Error</button>
+            <button class="filter-btn" data-filter="5xx">5xx Server Error</button>
+        </div>
+        
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search by code or description..." id="searchInput">
+        </div>
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <div class="stats-bar">
+        <div class="stats-item">
+            <div class="stats-number" id="totalCodes">0</div>
+            <div>Total Codes</div>
+        </div>
+        <div class="stats-item">
+            <div class="stats-number" id="visibleCodes">0</div>
+            <div>Visible</div>
+        </div>
+    </div>
+
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const statusCodes = [
+            // 1xx Informational
+            { code: 100, name: "Continue", description: "The server has received the request headers and the client should proceed to send the request body.", icon: "🔄", examples: ["Client sending large POST data", "Expecting response validation"] },
+            { code: 101, name: "Switching Protocols", description: "The requester has asked the server to switch protocols and the server has agreed to do so.", icon: "🔀", examples: ["HTTP to WebSocket upgrade", "Protocol negotiation"] },
+            { code: 102, name: "Processing", description: "The server has received and is processing the request, but no response is available yet.", icon: "⚙️", examples: ["WebDAV operations", "Long-running server processes"] },
+            
+            // 2xx Success
+            { code: 200, name: "OK", description: "The request has succeeded. The meaning of success depends on the HTTP method used.", icon: "✅", examples: ["GET: Resource retrieved", "POST: Resource created/updated"] },
+            { code: 201, name: "Created", description: "The request has succeeded and a new resource has been created as a result.", icon: "🎉", examples: ["POST creating new user", "File upload successful"] },
+            { code: 202, name: "Accepted", description: "The request has been received but not yet acted upon. It is non-committal.", icon: "📝", examples: ["Batch processing queued", "Async operation started"] },
+            { code: 204, name: "No Content", description: "The server successfully processed the request and is not returning any content.", icon: "📭", examples: ["DELETE operation", "PUT update without response body"] },
+            { code: 206, name: "Partial Content", description: "The server is delivering only part of the resource due to a range header sent by the client.", icon: "📊", examples: ["Video streaming chunks", "File download resumption"] },
+            
+            // 3xx Redirection
+            { code: 300, name: "Multiple Choices", description: "The request has more than one possible response. The user agent should choose one.", icon: "🔀", examples: ["Multiple file formats available", "Content negotiation"] },
+            { code: 301, name: "Moved Permanently", description: "The URL of the requested resource has been changed permanently. The new URL is given in the response.", icon: "📦", examples: ["Domain migration", "URL structure change"] },
+            { code: 302, name: "Found", description: "The URI of requested resource has been changed temporarily. Further changes in the URI might be made in the future.", icon: "🔍", examples: ["Temporary redirect", "A/B testing"] },
+            { code: 304, name: "Not Modified", description: "Indicates that the resource has not been modified since the version specified by the request headers.", icon: "💾", examples: ["Browser cache validation", "Conditional requests"] },
+            { code: 307, name: "Temporary Redirect", description: "The target resource resides temporarily under a different URI.", icon: "🔄", examples: ["Maintenance redirect", "Load balancing"] },
+            { code: 308, name: "Permanent Redirect", description: "The target resource has been assigned a new permanent URI.", icon: "🏠", examples: ["HTTPS enforcement", "API versioning"] },
+            
+            // 4xx Client Errors
+            { code: 400, name: "Bad Request", description: "The server could not understand the request due to invalid syntax.", icon: "❌", examples: ["Malformed JSON", "Missing required parameters"] },
+            { code: 401, name: "Unauthorized", description: "The client must authenticate itself to get the requested response.", icon: "🔒", examples: ["Missing authentication token", "Invalid credentials"] },
+            { code: 403, name: "Forbidden", description: "The client does not have access rights to the content.", icon: "🚫", examples: ["Insufficient permissions", "IP blocking"] },
+            { code: 404, name: "Not Found", description: "The server can not find the requested resource.", icon: "🔍", examples: ["Non-existent URL", "Deleted resource"] },
+            { code: 405, name: "Method Not Allowed", description: "The request method is known by the server but is not supported by the target resource.", icon: "⛔", examples: ["POST on read-only endpoint", "DELETE not implemented"] },
+            { code: 408, name: "Request Timeout", description: "The server would like to shut down this unused connection.", icon: "⏰", examples: ["Slow client connection", "Network latency issues"] },
+            { code: 409, name: "Conflict", description: "The request conflicts with the current state of the server.", icon: "⚡", examples: ["Resource already exists", "Version conflicts"] },
+            { code: 410, name: "Gone", description: "The requested resource is no longer available and will not be available again.", icon: "👻", examples: ["Permanently removed content", "Deprecated API endpoints"] },
+            { code: 418, name: "I'm a teapot", description: "The server refuses to brew coffee because it is, permanently, a teapot. This is an April Fools' joke from 1998.", icon: "🫖", examples: ["April Fools' RFC 2324", "Teapot server implementations"] },
+            { code: 422, name: "Unprocessable Entity", description: "The request was well-formed but was unable to be followed due to semantic errors.", icon: "📋", examples: ["Validation errors", "Business logic violations"] },
+            { code: 429, name: "Too Many Requests", description: "The user has sent too many requests in a given amount of time.", icon: "🚦", examples: ["Rate limiting", "API quota exceeded"] },
+            
+            // 5xx Server Errors
+            { code: 500, name: "Internal Server Error", description: "The server has encountered a situation it doesn't know how to handle.", icon: "💥", examples: ["Unhandled exceptions", "Database connection failure"] },
+            { code: 501, name: "Not Implemented", description: "The request method is not supported by the server and cannot be handled.", icon: "🚧", examples: ["Unsupported HTTP method", "Feature not implemented"] },
+            { code: 502, name: "Bad Gateway", description: "The server was acting as a gateway and received an invalid response from the upstream server.", icon: "🌐", examples: ["Proxy server issues", "Upstream server down"] },
+            { code: 503, name: "Service Unavailable", description: "The server is not ready to handle the request due to temporary overloading or maintenance.", icon: "⚠️", examples: ["Server maintenance", "Overloaded server"] },
+            { code: 504, name: "Gateway Timeout", description: "The server was acting as a gateway and did not receive a timely response from the upstream server.", icon: "⏱️", examples: ["Upstream server timeout", "Network issues"] },
+            { code: 505, name: "HTTP Version Not Supported", description: "The HTTP version used in the request is not supported by the server.", icon: "🔄", examples: ["Outdated HTTP version", "Version incompatibility"] }
+        ];
+
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        function getCategoryClass(code) {
+            if (code >= 100 && code < 200) return 'category-1xx';
+            if (code >= 200 && code < 300) return 'category-2xx';
+            if (code >= 300 && code < 400) return 'category-3xx';
+            if (code >= 400 && code < 500) return 'category-4xx';
+            if (code >= 500 && code < 600) return 'category-5xx';
+            return '';
+        }
+
+        function getCategoryFilter(code) {
+            if (code >= 100 && code < 200) return '1xx';
+            if (code >= 200 && code < 300) return '2xx';
+            if (code >= 300 && code < 400) return '3xx';
+            if (code >= 400 && code < 500) return '4xx';
+            if (code >= 500 && code < 600) return '5xx';
+            return '';
+        }
+
+        function createStatusCard(status) {
+            const card = document.createElement('div');
+            const isTeapot = status.code === 418;
+            
+            card.className = `status-card ${getCategoryClass(status.code)} ${isTeapot ? 'teapot-card' : ''} fade-in`;
+            card.dataset.category = getCategoryFilter(status.code);
+            card.dataset.code = status.code;
+            card.dataset.name = status.name.toLowerCase();
+            card.dataset.description = status.description.toLowerCase();
+            
+            card.innerHTML = `
+                <div class="status-icon">${status.icon}</div>
+                <div class="status-code">${status.code}</div>
+                <div class="status-name">${status.name}</div>
+                <div class="status-description">${status.description}</div>
+            `;
+            
+            card.addEventListener('click', () => showModal(status));
+            
+            return card;
+        }
+
+        function showModal(status) {
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+            
+            const examples = status.examples.map(ex => `<div class="example-item">${ex}</div>`).join('');
+            
+            content.innerHTML = `
+                <h2 style="color: #00d4ff; margin-bottom: 1rem;">${status.code} - ${status.name}</h2>
+                <p style="font-size: 1.1rem; margin-bottom: 1.5rem; line-height: 1.6;">${status.description}</p>
+                <div class="usage-examples">
+                    <h3 style="margin-bottom: 1rem;">Common Use Cases:</h3>
+                    ${examples}
+                </div>
+                <div style="margin-top: 2rem; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                    <strong>Category:</strong> ${getCategoryFilter(status.code)} ${getCategoryName(status.code)}
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('detailModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function getCategoryName(code) {
+            if (code >= 100 && code < 200) return 'Informational';
+            if (code >= 200 && code < 300) return 'Success';
+            if (code >= 300 && code < 400) return 'Redirection';
+            if (code >= 400 && code < 500) return 'Client Error';
+            if (code >= 500 && code < 600) return 'Server Error';
+            return '';
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+            
+            const filteredCodes = statusCodes.filter(status => {
+                const matchesFilter = currentFilter === 'all' || getCategoryFilter(status.code) === currentFilter;
+                const matchesSearch = !searchQuery || 
+                    status.code.toString().includes(searchQuery) ||
+                    status.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    status.description.toLowerCase().includes(searchQuery.toLowerCase());
+                
+                return matchesFilter && matchesSearch;
+            });
+            
+            filteredCodes.forEach((status, index) => {
+                const card = createStatusCard(status);
+                card.style.animationDelay = `${index * 0.1}s`;
+                gallery.appendChild(card);
+            });
+            
+            updateStats();
+        }
+
+        function updateStats() {
+            const totalCodes = statusCodes.length;
+            const visibleCards = document.querySelectorAll('.status-card:not(.hidden)').length;
+            
+            document.getElementById('totalCodes').textContent = totalCodes;
+            document.getElementById('visibleCodes').textContent = visibleCards;
+        }
+
+        function setupEventListeners() {
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderGallery();
+                });
+            });
+
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                renderGallery();
+            });
+
+            // Modal close on outside click
+            document.getElementById('detailModal').addEventListener('click', (e) => {
+                if (e.target.id === 'detailModal') {
+                    closeModal();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+                if (e.key === '/' && e.target.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        }
+
+        // Initialize the application
+        function init() {
+            renderGallery();
+            setupEventListeners();
+            
+            // Add some loading animation
+            setTimeout(() => {
+                document.querySelectorAll('.status-card').forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, index * 50);
+                });
+            }, 100);
+        }
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Add some dynamic background effects
+        function createFloatingElements() {
+            for (let i = 0; i < 20; i++) {
+                const element = document.createElement('div');
+                element.style.position = 'fixed';
+                element.style.width = Math.random() * 20 + 10 + 'px';
+                element.style.height = element.style.width;
+                element.style.background = `rgba(${Math.random() * 255}, ${Math.random() * 255}, 255, 0.1)`;
+                element.style.borderRadius = '50%';
+                element.style.left = Math.random() * 100 + 'vw';
+                element.style.top = Math.random() * 100 + 'vh';
+                element.style.pointerEvents = 'none';
+                element.style.zIndex = '-1';
+                element.style.animation = `float ${Math.random() * 10 + 10}s ease-in-out infinite`;
+                document.body.appendChild(element);
+                
+                // Remove after animation
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                }, 20000);
+            }
+        }
+
+        // Create floating background elements periodically
+        setInterval(createFloatingElements, 5000);
+        createFloatingElements();
+    </script>
+</body>
+</html>
