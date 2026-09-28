@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Status Code Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            from { text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
+            to { text-shadow: 0 4px 25px rgba(255, 255, 255, 0.2), 0 0 30px rgba(255, 255, 255, 0.1); }
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.2rem;
+            font-weight: 300;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: 500;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(50px);
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        .status-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-code {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .status-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .status-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .status-metaphor {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-style: italic;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-metaphor::before {
+            content: '💭';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+        }
+
+        /* Category-specific colors */
+        .info .status-code { color: #17a2b8; }
+        .success .status-code { color: #28a745; }
+        .redirect .status-code { color: #fd7e14; }
+        .client-error .status-code { color: #dc3545; }
+        .server-error .status-code { color: #6f42c1; }
+
+        /* Special 418 Teapot styling */
+        .teapot {
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b95 100%);
+            color: white;
+            animation: teapotWiggle 2s ease-in-out infinite;
+            position: relative;
+        }
+
+        .teapot::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .teapot .status-code {
+            color: white;
+            font-size: 4rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .teapot .status-name,
+        .teapot .status-description {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .teapot-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 3rem;
+            animation: teapotSteam 1.5s ease-in-out infinite;
+        }
+
+        @keyframes teapotWiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(1deg); }
+            75% { transform: rotate(-1deg); }
+        }
+
+        @keyframes teapotSteam {
+            0%, 100% { opacity: 1; transform: translateY(0); }
+            50% { opacity: 0.7; transform: translateY(-5px); }
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Search functionality */
+        .search-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .search-input {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            width: 300px;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Floating particles animation */
+        .particle {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 6s infinite linear;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .status-grid { grid-template-columns: 1fr; }
+            .status-card { padding: 20px; }
+            .status-code { font-size: 2.5rem; }
+        }
+
+        /* Loading animation */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-left: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Stats panel */
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            color: white;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .stat-item h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>HTTP Status Visualizer</h1>
+        <p class="subtitle">Interactive gallery of HTTP response codes with visual metaphors</p>
+        
+        <div class="stats-panel">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3 id="total-codes">0</h3>
+                    <p>Total Codes</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="visible-codes">0</h3>
+                    <p>Showing</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="current-filter">All</h3>
+                    <p>Filter</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search status codes..." id="searchInput">
+        </div>
+
+        <div class="controls">
+            <button class="filter-btn active" data-filter="all">All Codes</button>
+            <button class="filter-btn" data-filter="info">1xx Info</button>
+            <button class="filter-btn" data-filter="success">2xx Success</button>
+            <button class="filter-btn" data-filter="redirect">3xx Redirect</button>
+            <button class="filter-btn" data-filter="client-error">4xx Client Error</button>
+            <button class="filter-btn" data-filter="server-error">5xx Server Error</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Loading HTTP status codes...
+        </div>
+        <div class="status-grid" id="statusGrid"></div>
+    </div>
+
+    <script>
+        // Comprehensive HTTP status codes with enhanced metaphors
+        const statusCodes = [
+            // 1xx Informational
+            { code: 100, name: "Continue", category: "info", description: "The server has received the request headers and the client should proceed to send the request body.", metaphor: "Like a traffic light turning green - you're cleared to proceed with your journey!" },
+            { code: 101, name: "Switching Protocols", category: "info", description: "The requester has asked the server to switch protocols.", metaphor: "Like switching from walking to driving mid-journey - changing the mode of transport!" },
+            { code: 102, name: "Processing", category: "info", description: "The server has received and is processing the request, but no response is available yet.", metaphor: "Like a chef saying 'your order is being prepared' - patience, good things are cooking!" },
+            
+            // 2xx Success  
+            { code: 200, name: "OK", category: "success", description: "The request has succeeded. The meaning of the success depends on the HTTP method.", metaphor: "Like finding exactly what you were looking for in a library - perfect match!" },
+            { code: 201, name: "Created", category: "success", description: "The request has been fulfilled and resulted in a new resource being created.", metaphor: "Like successfully planting a seed that sprouted into a beautiful flower!" },
+            { code: 202, name: "Accepted", category: "success", description: "The request has been accepted for processing, but the processing has not been completed.", metaphor: "Like your job application being received - it's in good hands but still being reviewed!" },
+            { code: 204, name: "No Content", category: "success", description: "The server successfully processed the request and is not returning any content.", metaphor: "Like a successful magic trick where the rabbit disappears completely - mission accomplished!" },
+            { code: 206, name: "Partial Content", category: "success", description: "The server is delivering only part of the resource due to a range header sent by the client.", metaphor: "Like reading just one chapter of a book at a time - you're getting pieces of the whole story!" },
+            
+            // 3xx Redirection
+            { code: 301, name: "Moved Permanently", category: "redirect", description: "The resource has been assigned a new permanent URI and any future references should use one of the returned URIs.", metaphor: "Like a forwarding address when you move houses - the post office knows where to find you!" },
+            { code: 302, name: "Found", category: "redirect", description: "The resource resides temporarily under a different URI.", metaphor: "Like a detour sign during road construction - temporary but necessary!" },
+            { code: 304, name: "Not Modified", category: "redirect", description: "Indicates that the resource has not been modified since the version specified by the request headers.", metaphor: "Like checking your reflection and realizing you still look the same as this morning!" },
+            { code: 307, name: "Temporary Redirect", category: "redirect", description: "The request should be repeated with another URI but future requests should still use the original URI.", metaphor: "Like taking a scenic route that's temporarily available - beautiful but not permanent!" },
+            { code: 308, name: "Permanent Redirect", category: "redirect", description: "The request and all future requests should be repeated using another URI.", metaphor: "Like a bridge that's permanently replaced - everyone needs to use the new path now!" },
+            
+            // 4xx Client Errors
+            { code: 400, name: "Bad Request", category: "client-error", description: "The server cannot or will not process the request due to an apparent client error.", metaphor: "Like ordering pizza with chocolate sauce and pickles - the server is confused by your request!" },
+            { code: 401, name: "Unauthorized", category: "client-error", description: "Authentication is required and has failed or has not yet been provided.", metaphor: "Like trying to enter a VIP club without showing your membership card - you need proper credentials!" },
+            { code: 403, name: "Forbidden", category: "client-error", description: "The request was valid, but the server is refusing action. The user might not have the necessary permissions.", metaphor: "Like having a library card but trying to access the restricted archives - you're not allowed in here!" },
+            { code: 404, name: "Not Found", category: "client-error", description: "The requested resource could not be found but may be available in the future.", metaphor: "Like looking for a unicorn in a horse stable - what you're seeking simply doesn't exist here!" },
+            { code: 405, name: "Method Not Allowed", category: "client-error", description: "A request method is not supported for the requested resource.", metaphor: "Like trying to pay for coffee with a hug - your approach is sweet but not accepted here!" },
+            { code: 408, name: "Request Timeout", category: "client-error", description: "The server timed out waiting for the request.", metaphor: "Like a patient waiter who finally gives up after you've been staring at the menu for too long!" },
+            { code: 409, name: "Conflict", category: "client-error", description: "Indicates that the request could not be processed because of conflict in the request.", metaphor: "Like two people trying to sit in the same chair - there's a fundamental incompatibility!" },
+            { code: 410, name: "Gone", category: "client-error", description: "Indicates that the resource requested is no longer available and will not be available again.", metaphor: "Like visiting your childhood home to find it demolished - it's gone forever!" },
+            { code: 413, name: "Payload Too Large", category: "client-error", description: "The request is larger than the server is willing or able to process.", metaphor: "Like trying to stuff a watermelon into a lunch box - your request is simply too big!" },
+            { code: 414, name: "URI Too Long", category: "client-error", description: "The URI provided was too long for the server to process.", metaphor: "Like giving directions that are longer than the actual journey - keep it concise!" },
+            { code: 418, name: "I'm a Teapot", category: "client-error", description: "This code was defined in 1998 as one of the traditional IETF April Fools' jokes, and is not expected to be implemented by actual HTTP servers.", metaphor: "Like asking a teapot to brew coffee - I'm designed for tea, not your caffeinated dreams! ☕️" },
+            { code: 429, name: "Too Many Requests", category: "client-error", description: "The user has sent too many requests in a given amount of time.", metaphor: "Like knocking on someone's door too enthusiastically - slow down, eager beaver!" },
+            
+            // 5xx Server Errors
+            { code: 500, name: "Internal Server Error", category: "server-error", description: "A generic error message when the server encounters an unexpected condition.", metaphor: "Like a chef having a complete meltdown in the kitchen - something went very wrong behind the scenes!" },
+            { code: 501, name: "Not Implemented", category: "server-error", description: "The server either does not recognize the request method, or it lacks the ability to fulfill the request.", metaphor: "Like asking a bicycle to fly - the server doesn't have that feature installed yet!" },
+            { code: 502, name: "Bad Gateway", category: "server-error", description: "The server was acting as a gateway or proxy and received an invalid response from the upstream server.", metaphor: "Like playing telephone where the message got completely garbled between two people!" },
+            { code: 503, name: "Service Unavailable", category: "server-error", description: "The server is currently unavailable (overloaded or down for maintenance).", metaphor: "Like finding your favorite restaurant closed for renovations - check back later!" },
+            { code: 504, name: "Gateway Timeout", category: "server-error", description: "The server was acting as a gateway or proxy and did not receive a timely response from the upstream server.", metaphor: "Like waiting for a friend who's stuck in traffic - the connection is there but timing out!" },
+            { code: 505, name: "HTTP Version Not Supported", category: "server-error", description: "The server does not support the HTTP protocol version used in the request.", metaphor: "Like trying to play a Blu-ray disc in a VHS player - the versions just don't match!" },
+            { code: 507, name: "Insufficient Storage", category: "server-error", description: "The server is unable to store the representation needed to complete the request.", metaphor: "Like trying to save a movie on a full phone - there's simply no space left!" },
+            { code: 508, name: "Loop Detected", category: "server-error", description: "The server detected an infinite loop while processing the request.", metaphor: "Like a dog chasing its own tail indefinitely - we're stuck in an endless circle!" },
+            { code: 511, name: "Network Authentication Required", category: "server-error", description: "The client needs to authenticate to gain network access.", metaphor: "Like needing to sign in to use airport WiFi - authentication required before proceeding!" }
+        ];
+
+        let currentFilter = 'all';
+        let filteredCodes = [...statusCodes];
+
+        // Create floating particles
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + 'vw';
+            particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+            particle.style.animationDelay = Math.random() * 2 + 's';
+            document.body.appendChild(particle);
+
+            setTimeout(() => {
+                particle.remove();
+            }, 6000);
+        }
+
+        // Create particles periodically
+        setInterval(createParticle, 300);
+
+        // Render status codes
+        function renderStatusCodes(codes) {
+            const grid = document.getElementById('statusGrid');
+            const loading = document.getElementById('loading');
+            
+            // Update stats
+            document.getElementById('total-codes').textContent = statusCodes.length;
+            document.getElementById('visible-codes').textContent = codes.length;
+            document.getElementById('current-filter').textContent = 
+                currentFilter === 'all' ? 'All' : currentFilter.charAt(0).toUpperCase() + currentFilter.slice(1);
+
+            setTimeout(() => {
+                loading.classList.add('hidden');
+                
+                grid.innerHTML = codes.map((status, index) => {
+                    const isTeapot = status.code === 418;
+                    return `
+                        <div class="status-card ${status.category}${isTeapot ? ' teapot' : ''}" 
+                             style="animation-delay: ${index * 0.1}s">
+                            ${isTeapot ? '<div class="teapot-icon">🫖</div>' : ''}
+                            <div class="status-code">${status.code}</div>
+                            <div class="status-name">${status.name}</div>
+                            <div class="status-description">${status.description}</div>
+                            <div class="status-metaphor">${status.metaphor}</div>
+                        </div>
+                    `;
+                }).join('');
+            }, 500);
+        }
+
+        // Filter functionality
+        function setupFilters() {
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Update active button
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Filter codes
+                    const filter = btn.dataset.filter;
+                    currentFilter = filter;
+                    
+                    if (filter === 'all') {
+                        filteredCodes = statusCodes;
+                    } else {
+                        filteredCodes = statusCodes.filter(code => code.category === filter);
+                    }
+                    
+                    applySearch();
+                });
+            });
+        }
+
+        // Search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            
+            searchInput.addEventListener('input', applySearch);
+        }
+
+        function applySearch() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let codesToShow = filteredCodes;
+            
+            if (searchTerm) {
+                codesToShow = filteredCodes.filter(code => 
+                    code.code.toString().includes(searchTerm) ||
+                    code.name.toLowerCase().includes(searchTerm) ||
+                    code.description.toLowerCase().includes(searchTerm) ||
+                    code.metaphor.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            renderStatusCodes(codesToShow);
+        }
+
+        // Initialize the application
+        function init() {
+            setupFilters();
+            setupSearch();
+            renderStatusCodes(statusCodes);
+            
+            // Add some interactive flair
+            document.addEventListener('mousemove', (e) => {
+                if (Math.random() > 0.98) {
+                    createParticle();
+                }
+            });
+        }
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '/' && !e.target.matches('input')) {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            
+            if (e.key === 'Escape') {
+                document.getElementById('searchInput').value = '';
+                applySearch();
+                document.getElementById('searchInput').blur();
+            }
+        });
+
+        // Add some Easter eggs for Adobe recruiters
+        let konamiCode = [];
+        const konamiSequence = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // Up, Up, Down, Down, Left, Right, Left, Right, B, A
+
+        document.addEventListener('keydown', (e) => {
+            konamiCode.push(e.keyCode);
+            if (konamiCode.length > konamiSequence.length) {
+                konamiCode.shift();
+            }
+            
+            if (konamiCode.join(',') === konamiSequence.join(',')) {
+                // Special Adobe Easter egg
+                const header = document.querySelector('.header h1');
+                header.textContent = 'Adobe-Ready HTTP Visualizer 🚀';
+                header.style.background = 'linear-gradient(45deg, #FF0000, #FF4500, #FF6B35)';
+                header.style.webkitBackgroundClip = 'text';
+                header.style.webkitTextFillColor = 'transparent';
+                
+                // Add some extra particles
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(createParticle, i * 100);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
