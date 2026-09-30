@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Status Code Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            padding: 0 2rem;
+        }
+
+        .category-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .category-btn:hover, .category-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+
+        .status-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-code {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .status-description {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-metaphor {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 15px;
+            font-style: italic;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .status-metaphor::before {
+            content: "💭";
+            position: absolute;
+            top: -5px;
+            left: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* Category-specific colors */
+        .info { border-left: 5px solid #3498db; }
+        .success { border-left: 5px solid #2ecc71; }
+        .redirect { border-left: 5px solid #f39c12; }
+        .client-error { border-left: 5px solid #e74c3c; }
+        .server-error { border-left: 5px solid #9b59b6; }
+
+        .info .status-code { color: #3498db; }
+        .success .status-code { color: #2ecc71; }
+        .redirect .status-code { color: #f39c12; }
+        .client-error .status-code { color: #e74c3c; }
+        .server-error .status-code { color: #9b59b6; }
+
+        /* Special 418 Teapot Animation */
+        .teapot {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            border: 3px solid #ff6b9d;
+            position: relative;
+            overflow: visible;
+        }
+
+        .teapot::before {
+            content: "🫖";
+            position: absolute;
+            font-size: 4rem;
+            right: -20px;
+            top: -20px;
+            animation: steam 2s infinite;
+            filter: drop-shadow(0 0 10px rgba(255, 107, 157, 0.5));
+        }
+
+        .teapot .status-code {
+            color: #ff1744;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes steam {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 1; }
+            50% { transform: translateY(-10px) rotate(5deg); opacity: 0.8; }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Animated icons for different categories */
+        .status-icon {
+            font-size: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        .info .status-icon { animation: spin 3s linear infinite; }
+        .success .status-icon { animation: checkmark 2s infinite; }
+        .redirect .status-icon { animation: arrow 2s infinite; }
+        .client-error .status-icon { animation: shake 2s infinite; }
+        .server-error .status-icon { animation: glitch 3s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes checkmark {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        @keyframes arrow {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(10px); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0px); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            color: white;
+            margin-top: 4rem;
+        }
+
+        .footer p {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .status-grid { grid-template-columns: 1fr; padding: 1rem; }
+            .category-nav { padding: 0 1rem; }
+            .category-btn { font-size: 0.8rem; padding: 0.5rem 1rem; }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>HTTP Status Code Visualizer</h1>
+        <p>Explore the language of the web through interactive status codes</p>
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search status codes..." id="searchInput">
+        </div>
+    </header>
+
+    <nav class="category-nav">
+        <button class="category-btn active" data-category="all">All Codes</button>
+        <button class="category-btn" data-category="info">1xx Info</button>
+        <button class="category-btn" data-category="success">2xx Success</button>
+        <button class="category-btn" data-category="redirect">3xx Redirect</button>
+        <button class="category-btn" data-category="client-error">4xx Client Error</button>
+        <button class="category-btn" data-category="server-error">5xx Server Error</button>
+    </nav>
+
+    <main class="status-grid" id="statusGrid">
+        <!-- Status codes will be dynamically inserted here -->
+    </main>
+
+    <footer class="footer">
+        <p>Crafted with precision for understanding HTTP communication protocols</p>
+    </footer>
+
+    <script>
+        const statusCodes = [
+            {
+                code: 100,
+                name: "Continue",
+                description: "The server has received the request headers and the client should proceed to send the request body.",
+                metaphor: "Like a traffic light turning green - you're cleared to proceed with your request.",
+                category: "info",
+                icon: "⏳"
+            },
+            {
+                code: 101,
+                name: "Switching Protocols",
+                description: "The requester has asked the server to switch protocols and the server has agreed to do so.",
+                metaphor: "Like switching from email to phone call mid-conversation - we're changing how we communicate.",
+                category: "info",
+                icon: "🔄"
+            },
+            {
+                code: 200,
+                name: "OK",
+                description: "The request has succeeded. The meaning of success depends on the HTTP method used.",
+                metaphor: "Like a perfect handshake - everything went exactly as planned.",
+                category: "success",
+                icon: "✅"
+            },
+            {
+                code: 201,
+                name: "Created",
+                description: "The request has been fulfilled and resulted in a new resource being created.",
+                metaphor: "Like successfully planting a seed that sprouted - something new has been born!",
+                category: "success",
+                icon: "🌱"
+            },
+            {
+                code: 204,
+                name: "No Content",
+                description: "The server successfully processed the request but is not returning any content.",
+                metaphor: "Like a chef nodding approvingly but saying nothing - job done, no words needed.",
+                category: "success",
+                icon: "🤐"
+            },
+            {
+                code: 301,
+                name: "Moved Permanently",
+                description: "The resource has been permanently moved to a different location.",
+                metaphor: "Like a forwarding address after moving houses - we've relocated permanently.",
+                category: "redirect",
+                icon: "📦"
+            },
+            {
+                code: 302,
+                name: "Found",
+                description: "The resource has been temporarily moved to a different location.",
+                metaphor: "Like staying at a hotel while your house is being renovated - temporary relocation.",
+                category: "redirect",
+                icon: "🏨"
+            },
+            {
+                code: 304,
+                name: "Not Modified",
+                description: "The resource has not been modified since the last request.",
+                metaphor: "Like checking your mailbox and finding it unchanged - nothing new here.",
+                category: "redirect",
+                icon: "📪"
+            },
+            {
+                code: 400,
+                name: "Bad Request",
+                description: "The server cannot process the request due to client error (e.g., malformed syntax).",
+                metaphor: "Like ordering pizza in a language the restaurant doesn't understand - your request is confusing.",
+                category: "client-error",
+                icon: "❌"
+            },
+            {
+                code: 401,
+                name: "Unauthorized",
+                description: "Authentication is required and has failed or has not yet been provided.",
+                metaphor: "Like trying to enter a VIP club without the right credentials - access denied.",
+                category: "client-error",
+                icon: "🚫"
+            },
+            {
+                code: 403,
+                name: "Forbidden",
+                description: "The request was valid, but the server is refusing action due to insufficient permissions.",
+                metaphor: "Like having a valid ID but still being denied entry - you're recognized but not allowed in.",
+                category: "client-error",
+                icon: "🔒"
+            },
+            {
+                code: 404,
+                name: "Not Found",
+                description: "The requested resource could not be found but may be available in the future.",
+                metaphor: "Like looking for a book that's been checked out - it exists somewhere, just not here right now.",
+                category: "client-error",
+                icon: "🔍"
+            },
+            {
+                code: 405,
+                name: "Method Not Allowed",
+                description: "The request method is not supported for the requested resource.",
+                metaphor: "Like trying to withdraw money from an ATM by speaking instead of using the keypad - wrong approach.",
+                category: "client-error",
+                icon: "🚷"
+            },
+            {
+                code: 418,
+                name: "I'm a Teapot",
+                description: "This code was defined in RFC 2324 as an April Fools' joke. Some servers implement this as a response to brewing coffee with a teapot.",
+                metaphor: "The most delightful error - like asking a teapot to make coffee. I'm specialized for tea, not coffee!",
+                category: "client-error",
+                icon: "🫖",
+                special: true
+            },
+            {
+                code: 429,
+                name: "Too Many Requests",
+                description: "The user has sent too many requests in a given amount of time (rate limiting).",
+                metaphor: "Like being told to slow down at a buffet - you're being a bit too eager!",
+                category: "client-error",
+                icon: "⏰"
+            },
+            {
+                code: 500,
+                name: "Internal Server Error",
+                description: "The server encountered an unexpected condition that prevented it from fulfilling the request.",
+                metaphor: "Like a chef having a kitchen fire - something went wrong on our end, not yours.",
+                category: "server-error",
+                icon: "🔥"
+            },
+            {
+                code: 502,
+                name: "Bad Gateway",
+                description: "The server received an invalid response from the upstream server while acting as a gateway or proxy.",
+                metaphor: "Like a translator getting gibberish from the person they're supposed to translate - the message got corrupted.",
+                category: "server-error",
+                icon: "📡"
+            },
+            {
+                code: 503,
+                name: "Service Unavailable",
+                description: "The server is currently unavailable (overloaded or down for maintenance).",
+                metaphor: "Like arriving at your favorite restaurant only to find a 'Closed for Renovations' sign.",
+                category: "server-error",
+                icon: "🚧"
+            },
+            {
+                code: 504,
+                name: "Gateway Timeout",
+                description: "The server did not receive a timely response from the upstream server while acting as a gateway.",
+                metaphor: "Like waiting for your friend to text back but they're in a dead zone - the connection timed out.",
+                category: "server-error",
+                icon: "⏱️"
+            }
+        ];
+
+        let currentFilter = 'all';
+        
+        function createStatusCard(status) {
+            const card = document.createElement('div');
+            card.className = `status-card ${status.category} fade-in`;
+            if (status.special) {
+                card.classList.add('teapot');
+            }
+            
+            card.innerHTML = `
+                <div class="status-code">
+                    ${status.code}
+                    <span class="status-icon">${status.icon}</span>
+                </div>
+                <div class="status-name">${status.name}</div>
+                <div class="status-description">${status.description}</div>
+                <div class="status-metaphor">${status.metaphor}</div>
+            `;
+            
+            card.addEventListener('click', () => {
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    card.style.transform = '';
+                }, 150);
+            });
+            
+            return card;
+        }
+        
+        function renderStatusCodes(codes = statusCodes) {
+            const grid = document.getElementById('statusGrid');
+            grid.innerHTML = '';
+            
+            codes.forEach((status, index) => {
+                setTimeout(() => {
+                    const card = createStatusCard(status);
+                    grid.appendChild(card);
+                }, index * 50);
+            });
+        }
+        
+        function filterStatusCodes(category) {
+            const filtered = category === 'all' ? statusCodes : statusCodes.filter(code => code.category === category);
+            renderStatusCodes(filtered);
+            
+            // Update active button
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.category === category);
+            });
+        }
+        
+        function searchStatusCodes(query) {
+            const filtered = statusCodes.filter(code => 
+                code.code.toString().includes(query) ||
+                code.name.toLowerCase().includes(query.toLowerCase()) ||
+                code.description.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            if (currentFilter !== 'all') {
+                return filtered.filter(code => code.category === currentFilter);
+            }
+            
+            return filtered;
+        }
+        
+        // Event listeners
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentFilter = btn.dataset.category;
+                filterStatusCodes(currentFilter);
+            });
+        });
+        
+        const searchInput = document.getElementById('searchInput');
+        let searchTimeout;
+        
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = e.target.value.trim();
+                if (query) {
+                    const filtered = searchStatusCodes(query);
+                    renderStatusCodes(filtered);
+                } else {
+                    filterStatusCodes(currentFilter);
+                }
+            }, 300);
+        });
+        
+        // Initialize
+        renderStatusCodes();
+        
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.width = particle.style.height = Math.random() * 4 + 2 + 'px';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // Scroll progress indicator
+        function updateScrollProgress() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = scrollTop / docHeight * 100;
+            document.getElementById('scrollProgress').style.width = scrollPercent + '%';
+        }
+        
+        // Toast notification system
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 10px;
+                z-index: 10000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                font-size: 0.9rem;
+                font-weight: 500;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.style.transform = 'translateX(0)', 100);
+            setTimeout(() => {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 2000);
+        }
+        
+        createParticles();
+        window.addEventListener('scroll', updateScrollProgress);
+        
+        // Add some interactive flair
+        document.addEventListener('mousemove', (e) => {
+            const cursor = { x: e.clientX, y: e.clientY };
+            const cards = document.querySelectorAll('.status-card');
+            
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const cardCenter = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+                
+                const distance = Math.sqrt(
+                    Math.pow(cursor.x - cardCenter.x, 2) + 
+                    Math.pow(cursor.y - cardCenter.y, 2)
+                );
+                
+                if (distance < 200) {
+                    const intensity = 1 - (distance / 200);
+                    card.style.transform = `translateY(-${intensity * 5}px) scale(${1 + intensity * 0.02})`;
+                }
+            });
+        });
+        
+        // Smooth scroll behavior
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('statusGrid').scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
