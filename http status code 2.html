@@ -1,0 +1,1006 @@
+// Enhanced event listeners and interactions
+        function setupEventListeners() {
+            // Search functionality with debounce
+            let searchTimeout;
+            document.getElementById('searchInput').addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => handleSearch(e), 300);
+            <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Status Code Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(12, 12, 12, 0.9);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00d4ff, #ff006e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .search-container {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            color: white;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border-color: #00d4ff;
+            transform: translateY(-2px);
+        }
+
+        .main-content {
+            margin-top: 100px;
+            padding: 2rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00d4ff, #ff006e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-card.teapot {
+            background: linear-gradient(135deg, rgba(139, 69, 19, 0.3), rgba(160, 82, 45, 0.3));
+            border-color: #8b4513;
+        }
+
+        .status-code {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .status-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .status-description {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            opacity: 0.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-metaphor {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1rem;
+            font-style: italic;
+            font-size: 0.85rem;
+            border-left: 3px solid;
+        }
+
+        .category-1xx { border-left-color: #6c5ce7; color: #a29bfe; }
+        .category-2xx { border-left-color: #00b894; color: #55efc4; }
+        .category-3xx { border-left-color: #fdcb6e; color: #f39c12; }
+        .category-4xx { border-left-color: #e17055; color: #fd79a8; }
+        .category-5xx { border-left-color: #d63031; color: #ff7675; }
+
+        .status-card .bg-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.1;
+            z-index: 1;
+        }
+
+        .teapot-animation {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 4rem;
+            animation: teapotSteam 2s ease-in-out infinite;
+            z-index: 3;
+        }
+
+        @keyframes teapotSteam {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(5deg) scale(1.1); }
+        }
+
+        .steam {
+            position: absolute;
+            top: -10px;
+            right: 60px;
+            font-size: 1.5rem;
+            animation: steamRise 3s ease-in-out infinite;
+            z-index: 3;
+        }
+
+        @keyframes steamRise {
+            0% { opacity: 0; transform: translateY(0px); }
+            50% { opacity: 1; transform: translateY(-20px); }
+            100% { opacity: 0; transform: translateY(-40px); }
+        }
+
+        .pulse-animation {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .shake-animation {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .example-usage {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        .category-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .category-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .category-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .category-btn.cat-1xx { border-color: #6c5ce7; }
+        .category-btn.cat-1xx:hover, .category-btn.cat-1xx.active { background: #6c5ce7; }
+
+        .category-btn.cat-2xx { border-color: #00b894; }
+        .category-btn.cat-2xx:hover, .category-btn.cat-2xx.active { background: #00b894; }
+
+        .category-btn.cat-3xx { border-color: #fdcb6e; }
+        .category-btn.cat-3xx:hover, .category-btn.cat-3xx.active { background: #fdcb6e; color: #000; }
+
+        .category-btn.cat-4xx { border-color: #e17055; }
+        .category-btn.cat-4xx:hover, .category-btn.cat-4xx.active { background: #e17055; }
+
+        .category-btn.cat-5xx { border-color: #d63031; }
+        .category-btn.cat-5xx:hover, .category-btn.cat-5xx.active { background: #d63031; }
+
+        .category-btn.cat-all { border-color: #00d4ff; }
+        .category-btn.cat-all:hover, .category-btn.cat-all.active { background: #00d4ff; color: #000; }
+
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1001;
+        }
+
+        .scroll-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #ff006e);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .search-container {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .filter-buttons {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .main-content {
+                margin-top: 160px;
+                padding: 1rem;
+            }
+
+            .gallery {
+                grid-template-columns: 1fr;
+            }
+
+            .category-selector {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-particles" id="particles"></div>
+    
+    <div class="scroll-indicator">
+        <div class="scroll-progress" id="scrollProgress"></div>
+    </div>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">HTTP Status Visualizer</div>
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search status codes...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="common">Common</button>
+                <button class="filter-btn" data-filter="rare">Rare</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCodes">63</div>
+                <div class="stat-label">Total Codes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="visibleCodes">63</div>
+                <div class="stat-label">Visible</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="categoryCount">5</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">418</div>
+                <div class="stat-label">🫖 Special</div>
+            </div>
+        </div>
+
+        <div class="category-selector">
+            <button class="category-btn cat-all active" data-category="all">All Codes</button>
+            <button class="category-btn cat-1xx" data-category="1xx">1xx Informational</button>
+            <button class="category-btn cat-2xx" data-category="2xx">2xx Success</button>
+            <button class="category-btn cat-3xx" data-category="3xx">3xx Redirection</button>
+            <button class="category-btn cat-4xx" data-category="4xx">4xx Client Error</button>
+            <button class="category-btn cat-5xx" data-category="5xx">5xx Server Error</button>
+        </div>
+
+        <div class="gallery" id="gallery"></div>
+    </main>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle"></h2>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const statusCodes = [
+            // 1xx Informational
+            { code: 100, name: "Continue", category: "1xx", common: true, description: "The server has received the request headers and the client should proceed to send the request body.", metaphor: "Like a green traffic light saying 'keep going'", usage: "POST requests with large payloads" },
+            { code: 101, name: "Switching Protocols", category: "1xx", common: false, description: "The server is switching protocols as requested by the client.", metaphor: "Like switching from walking to driving mid-journey", usage: "WebSocket upgrades, HTTP/2 upgrades" },
+            { code: 102, name: "Processing", category: "1xx", common: false, description: "The server has received and is processing the request, but no response is available yet.", metaphor: "Like a loading spinner that talks", usage: "Long-running server operations" },
+            { code: 103, name: "Early Hints", category: "1xx", common: false, description: "Used to return some response headers before final HTTP message.", metaphor: "Like getting a movie trailer before the main feature", usage: "Preloading resources while processing" },
+
+            // 2xx Success
+            { code: 200, name: "OK", category: "2xx", common: true, description: "The request was successful and the response contains the requested data.", metaphor: "Like a perfect handshake - everything went smoothly", usage: "Successful GET, POST, PUT requests" },
+            { code: 201, name: "Created", category: "2xx", common: true, description: "The request was successful and a new resource was created.", metaphor: "Like successfully planting a seed that sprouted", usage: "POST requests that create new resources" },
+            { code: 202, name: "Accepted", category: "2xx", common: false, description: "The request has been accepted for processing, but processing is not complete.", metaphor: "Like submitting a job application - received but not processed", usage: "Asynchronous processing endpoints" },
+            { code: 203, name: "Non-Authoritative Information", category: "2xx", common: false, description: "The request was successful, but the response is from a third party.", metaphor: "Like getting news from a reliable friend instead of the source", usage: "Proxy responses, cached content" },
+            { code: 204, name: "No Content", category: "2xx", common: true, description: "The request was successful, but there's no content to return.", metaphor: "Like a successful magic trick where something disappears", usage: "DELETE requests, updates with no response body" },
+            { code: 205, name: "Reset Content", category: "2xx", common: false, description: "The request was successful, and the client should reset the form.", metaphor: "Like an Etch-a-Sketch shake - success, now start fresh", usage: "Form submissions requiring reset" },
+            { code: 206, name: "Partial Content", category: "2xx", common: false, description: "The server is delivering only part of the resource due to a range header.", metaphor: "Like getting just one chapter of a book you requested", usage: "Video streaming, large file downloads" },
+            { code: 207, name: "Multi-Status", category: "2xx", common: false, description: "Multiple status codes for multiple independent operations.", metaphor: "Like a report card with different grades for each subject", usage: "WebDAV operations on multiple resources" },
+            { code: 208, name: "Already Reported", category: "2xx", common: false, description: "Used to avoid enumerating the internal members of multiple bindings.", metaphor: "Like saying 'ditto' instead of repeating yourself", usage: "WebDAV collection responses" },
+            { code: 226, name: "IM Used", category: "2xx", common: false, description: "The server has fulfilled a request for the resource using instance manipulations.", metaphor: "Like a chef's special preparation of a standard dish", usage: "Delta encoding responses" },
+
+            // 3xx Redirection
+            { code: 300, name: "Multiple Choices", category: "3xx", common: false, description: "There are multiple possible responses, and the user must choose one.", metaphor: "Like standing at a fork in the road with multiple paths", usage: "Content negotiation with multiple formats" },
+            { code: 301, name: "Moved Permanently", category: "3xx", common: true, description: "The resource has been permanently moved to a new URL.", metaphor: "Like a forwarding address that never expires", usage: "Website restructuring, URL canonicalization" },
+            { code: 302, name: "Found", category: "3xx", common: true, description: "The resource is temporarily at a different URL.", metaphor: "Like a detour sign during road construction", usage: "Temporary redirects, login flows" },
+            { code: 303, name: "See Other", category: "3xx", common: false, description: "The response can be found at a different URL using GET.", metaphor: "Like pointing to a different section of a library", usage: "POST-redirect-GET pattern" },
+            { code: 304, name: "Not Modified", category: "3xx", common: true, description: "The resource hasn't changed since the last request.", metaphor: "Like checking your watch and seeing it's the same time", usage: "Browser caching, conditional requests" },
+            { code: 305, name: "Use Proxy", category: "3xx", common: false, description: "The resource must be accessed through a specified proxy.", metaphor: "Like needing to go through a translator", usage: "Deprecated - security concerns" },
+            { code: 307, name: "Temporary Redirect", category: "3xx", common: false, description: "The resource is temporarily at a different URL, method must not change.", metaphor: "Like a bridge closure with a specific detour route", usage: "Maintaining HTTP method during redirect" },
+            { code: 308, name: "Permanent Redirect", category: "3xx", common: false, description: "The resource has permanently moved, method must not change.", metaphor: "Like moving houses but keeping all your habits", usage: "Permanent redirects preserving request method" },
+
+            // 4xx Client Error
+            { code: 400, name: "Bad Request", category: "4xx", common: true, description: "The request was malformed or invalid.", metaphor: "Like ordering a pizza with incomprehensible toppings", usage: "Malformed JSON, missing required fields" },
+            { code: 401, name: "Unauthorized", category: "4xx", common: true, description: "Authentication is required to access this resource.", metaphor: "Like trying to enter a VIP area without a pass", usage: "Missing or invalid authentication credentials" },
+            { code: 402, name: "Payment Required", category: "4xx", common: false, description: "Payment is required to access this resource.", metaphor: "Like a coin-operated machine waiting for quarters", usage: "Premium content, API rate limiting" },
+            { code: 403, name: "Forbidden", category: "4xx", common: true, description: "The server understood the request but refuses to authorize it.", metaphor: "Like having the right key but the door is chained shut", usage: "Insufficient permissions, IP blocking" },
+            { code: 404, name: "Not Found", category: "4xx", common: true, description: "The requested resource could not be found.", metaphor: "Like looking for a book that's not on the shelf", usage: "Broken links, deleted resources, typos in URLs" },
+            { code: 405, name: "Method Not Allowed", category: "4xx", common: true, description: "The HTTP method is not supported for this resource.", metaphor: "Like trying to push a door that only pulls", usage: "GET request to POST-only endpoint" },
+            { code: 406, name: "Not Acceptable", category: "4xx", common: false, description: "The resource cannot be delivered in a format acceptable to the client.", metaphor: "Like asking for a vegetarian meal at a steakhouse", usage: "Content negotiation failures" },
+            { code: 407, name: "Proxy Authentication Required", category: "4xx", common: false, description: "Authentication with the proxy is required.", metaphor: "Like needing to show ID to a bouncer before entering", usage: "Corporate proxy authentication" },
+            { code: 408, name: "Request Timeout", category: "4xx", common: false, description: "The server timed out waiting for the request.", metaphor: "Like hanging up after being on hold too long", usage: "Slow client connections, large uploads" },
+            { code: 409, name: "Conflict", category: "4xx", common: false, description: "The request conflicts with the current state of the resource.", metaphor: "Like trying to book a seat that's already taken", usage: "Version conflicts, resource state conflicts" },
+            { code: 410, name: "Gone", category: "4xx", common: false, description: "The resource was available but has been permanently removed.", metaphor: "Like finding an empty lot where a building used to be", usage: "Intentionally removed content, deprecated APIs" },
+            { code: 411, name: "Length Required", category: "4xx", common: false, description: "The request must include a Content-Length header.", metaphor: "Like needing to weigh your luggage before checking in", usage: "POST/PUT requests without Content-Length" },
+            { code: 412, name: "Precondition Failed", category: "4xx", common: false, description: "One or more preconditions in the request header fields evaluated to false.", metaphor: "Like failing the prerequisites for a college course", usage: "Conditional requests that fail validation" },
+            { code: 413, name: "Payload Too Large", category: "4xx", common: false, description: "The request payload is larger than the server is able to process.", metaphor: "Like trying to stuff a suitcase that won't close", usage: "File uploads exceeding size limits" },
+            { code: 414, name: "URI Too Long", category: "4xx", common: false, description: "The URI provided was too long for the server to process.", metaphor: "Like writing an address that doesn't fit on an envelope", usage: "GET requests with excessive query parameters" },
+            { code: 415, name: "Unsupported Media Type", category: "4xx", common: false, description: "The media format of the request is not supported.", metaphor: "Like trying to play a cassette in a CD player", usage: "Wrong Content-Type header, unsupported file formats" },
+            { code: 416, name: "Range Not Satisfiable", category: "4xx", common: false, description: "The range specified in the Range header cannot be satisfied.", metaphor: "Like asking for pages 100-200 of a 50-page book", usage: "Invalid byte ranges in media streaming" },
+            { code: 417, name: "Expectation Failed", category: "4xx", common: false, description: "The server cannot meet the requirements of the Expect request header.", metaphor: "Like expecting a five-star meal but getting fast food", usage: "Expect: 100-continue header issues" },
+            { code: 418, name: "I'm a teapot", category: "4xx", common: false, description: "The server refuses the attempt to brew coffee with a teapot. This is an April Fools' joke from 1998.", metaphor: "Like asking a teapot to make coffee - it's simply not what I do! ☕→🫖", usage: "April Fools' Day responses, playful APIs", special: true },
+            { code: 421, name: "Misdirected Request", category: "4xx", common: false, description: "The request was directed at a server that cannot produce a response.", metaphor: "Like mailing a letter to the wrong address entirely", usage: "HTTP/2 connection issues" },
+            { code: 422, name: "Unprocessable Entity", category: "4xx", common: false, description: "The request was well-formed but contains semantic errors.", metaphor: "Like a grammatically correct sentence that makes no sense", usage: "Validation errors in REST APIs" },
+            { code: 423, name: "Locked", category: "4xx", common: false, description: "The resource that is being accessed is locked.", metaphor: "Like finding a diary with a lock on it", usage: "WebDAV locked resources" },
+            { code: 424, name: "Failed Dependency", category: "4xx", common: false, description: "The request failed because it depended on another request that failed.", metaphor: "Like a domino effect where one failure causes another", usage: "WebDAV dependent operations" },
+            { code: 425, name: "Too Early", category: "4xx", common: false, description: "The server is unwilling to risk processing a request that might be replayed.", metaphor: "Like being fashionably early to a party that hasn't started", usage: "HTTP Early Data security concerns" },
+            { code: 426, name: "Upgrade Required", category: "4xx", common: false, description: "The client should switch to a different protocol.", metaphor: "Like needing to upgrade your phone for new features", usage: "Forcing HTTPS, WebSocket upgrades" },
+            { code: 428, name: "Precondition Required", category: "4xx", common: false, description: "The server requires the request to be conditional.", metaphor: "Like needing a permission slip for a field trip", usage: "Lost update prevention" },
+            { code: 429, name: "Too Many Requests", category: "4xx", common: true, description: "The user has sent too many requests in a given amount of time.", metaphor: "Like being told to slow down at an all-you-can-eat buffet", usage: "API rate limiting, spam prevention" },
+            { code: 431, name: "Request Header Fields Too Large", category: "4xx", common: false, description: "The server is unwilling to process the request because its header fields are too large.", metaphor: "Like trying to fit too much information on a sticky note", usage: "Oversized cookies, excessive custom headers" },
+            { code: 451, name: "Unavailable For Legal Reasons", category: "4xx", common: false, description: "The user agent requested a resource that cannot legally be provided.", metaphor: "Like a library book that's been banned", usage: "DMCA takedowns, government censorship" },
+
+            // 5xx Server Error
+            { code: 500, name: "Internal Server Error", category: "5xx", common: true, description: "A generic error message when the server encounters an unexpected condition.", metaphor: "Like a chef having a complete meltdown in the kitchen", usage: "Unhandled exceptions, database errors" },
+            { code: 501, name: "Not Implemented", category: "5xx", common: false, description: "The server does not support the functionality required to fulfill the request.", metaphor: "Like asking for a feature that doesn't exist yet", usage: "Unsupported HTTP methods" },
+            { code: 502, name: "Bad Gateway", category: "5xx", common: true, description: "The server received an invalid response from an upstream server.", metaphor: "Like a translator getting gibberish from the original speaker", usage: "Proxy server errors, upstream service failures" },
+            { code: 503, name: "Service Unavailable", category: "5xx", common: true, description: "The server is currently unable to handle the request due to temporary overloading or maintenance.", metaphor: "Like a restaurant with a 'temporarily closed' sign", usage: "Server maintenance, overload conditions" },
+            { code: 504, name: "Gateway Timeout", category: "5xx", common: true, description: "The server did not receive a timely response from an upstream server.", metaphor: "Like waiting for someone who never shows up to a meeting", usage: "Slow upstream services, network timeouts" },
+            { code: 505, name: "HTTP Version Not Supported", category: "5xx", common: false, description: "The server does not support the HTTP protocol version used in the request.", metaphor: "Like trying to play a Blu-ray on a VHS player", usage: "Outdated server configurations" },
+            { code: 506, name: "Variant Also Negotiates", category: "5xx", common: false, description: "The server has an internal configuration error.", metaphor: "Like a GPS that keeps recalculating the same route", usage: "Content negotiation loops" },
+            { code: 507, name: "Insufficient Storage", category: "5xx", common: false, description: "The server is unable to store the representation needed to complete the request.", metaphor: "Like a parking garage with no empty spaces", usage: "WebDAV storage limits, disk space issues" },
+            { code: 508, name: "Loop Detected", category: "5xx", common: false, description: "The server detected an infinite loop while processing the request.", metaphor: "Like being stuck in a revolving door", usage: "WebDAV infinite redirect loops" },
+            { code: 510, name: "Not Extended", category: "5xx", common: false, description: "Further extensions to the request are required for the server to fulfill it.", metaphor: "Like needing additional attachments for a complex form", usage: "HTTP Extension Framework" },
+            { code: 511, name: "Network Authentication Required", category: "5xx", common: false, description: "The client needs to authenticate to gain network access.", metaphor: "Like needing to sign into hotel WiFi", usage: "Captive portals, network authentication" }
+        ];
+
+        let currentFilter = 'all';
+        let currentCategory = 'all';
+        let searchQuery = '';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+            renderGallery();
+            setupEventListeners();
+            updateStats();
+            updateScrollProgress();
+        });
+
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const particleCount = 50;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.width = particle.style.height = Math.random() * 4 + 2 + 'px';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', handleFilter);
+            });
+
+            // Category buttons
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', handleCategory);
+            });
+
+            // Modal functionality
+            document.getElementById('modalClose').addEventListener('click', closeModal);
+            document.getElementById('modal').addEventListener('click', function(e) {
+                if (e.target === this) closeModal();
+            });
+
+            // Scroll progress
+            window.addEventListener('scroll', updateScrollProgress);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboard);
+        }
+
+        function handleSearch(e) {
+            searchQuery = e.target.value.toLowerCase();
+            renderGallery();
+        }
+
+        function handleFilter(e) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            currentFilter = e.target.dataset.filter;
+            renderGallery();
+        }
+
+        function handleCategory(e) {
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            currentCategory = e.target.dataset.category;
+            renderGallery();
+        }
+
+        function handleKeyboard(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            } else if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+            }
+        }
+
+        function filterStatusCodes() {
+            return statusCodes.filter(status => {
+                // Search filter
+                if (searchQuery) {
+                    const searchMatch = 
+                        status.code.toString().includes(searchQuery) ||
+                        status.name.toLowerCase().includes(searchQuery) ||
+                        status.description.toLowerCase().includes(searchQuery) ||
+                        status.metaphor.toLowerCase().includes(searchQuery);
+                    if (!searchMatch) return false;
+                }
+
+                // Category filter
+                if (currentCategory !== 'all' && status.category !== currentCategory) {
+                    return false;
+                }
+
+                // Common/rare filter
+                if (currentFilter === 'common' && !status.common) return false;
+                if (currentFilter === 'rare' && status.common) return false;
+
+                return true;
+            });
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            const filteredCodes = filterStatusCodes();
+            
+            gallery.innerHTML = '';
+
+            filteredCodes.forEach((status, index) => {
+                const card = createStatusCard(status, index);
+                gallery.appendChild(card);
+            });
+
+            updateStats();
+        }
+
+        function createStatusCard(status, index) {
+            const card = document.createElement('div');
+            card.className = `status-card category-${status.category}`;
+            
+            if (status.special) {
+                card.classList.add('teapot');
+            }
+
+            card.innerHTML = `
+                <div class="bg-animation"></div>
+                ${status.special ? `
+                    <div class="teapot-animation">🫖</div>
+                    <div class="steam">💨</div>
+                ` : ''}
+                <div class="status-code ${status.category}">${status.code}</div>
+                <div class="status-name">${status.name}</div>
+                <div class="status-description">${status.description}</div>
+                <div class="status-metaphor category-${status.category}">${status.metaphor}</div>
+            `;
+
+            // Add click event for modal
+            card.addEventListener('click', () => openModal(status));
+
+            // Add entrance animation
+            setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(50px)';
+                card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            }, 50);
+
+            return card;
+        }
+
+        function openModal(status) {
+            const modal = document.getElementById('modal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+
+            title.innerHTML = `${status.code} - ${status.name}`;
+            
+            body.innerHTML = `
+                <div class="status-code category-${status.category}" style="font-size: 2.5rem; margin-bottom: 1rem;">${status.code}</div>
+                
+                <h3>Description</h3>
+                <p style="margin-bottom: 1.5rem; line-height: 1.6;">${status.description}</p>
+                
+                <h3>Real-World Metaphor</h3>
+                <div class="status-metaphor category-${status.category}" style="margin-bottom: 1.5rem;">
+                    ${status.metaphor}
+                </div>
+                
+                <h3>Common Usage</h3>
+                <p style="margin-bottom: 1.5rem; line-height: 1.6;">${status.usage}</p>
+                
+                <h3>Example Response</h3>
+                <div class="example-usage">
+HTTP/1.1 ${status.code} ${status.name}
+Content-Type: application/json
+Date: ${new Date().toUTCString()}
+
+${getExampleResponse(status)}
+                </div>
+                
+                <h3>Technical Details</h3>
+                <ul style="margin: 1rem 0; line-height: 1.6;">
+                    <li><strong>Category:</strong> ${getCategoryDescription(status.category)}</li>
+                    <li><strong>Cacheable:</strong> ${isCacheable(status.code) ? 'Yes' : 'No'}</li>
+                    <li><strong>Safe Method:</strong> ${isSafeMethod(status.code) ? 'Yes' : 'No'}</li>
+                    <li><strong>RFC Reference:</strong> <a href="https://tools.ietf.org/html/rfc7231#section-6.${status.category.charAt(0)}" target="_blank" style="color: #00d4ff;">RFC 7231</a></li>
+                </ul>
+                
+                ${status.special ? `
+                    <div style="background: linear-gradient(45deg, rgba(139, 69, 19, 0.2), rgba(160, 82, 45, 0.2)); padding: 1rem; border-radius: 10px; margin-top: 1rem; border-left: 3px solid #8b4513;">
+                        <h4>🫖 Special Status Code</h4>
+                        <p>This is the famous "I'm a teapot" status code from RFC 2324 (April 1st, 1998). It's a humorous status code that demonstrates the HTCPCP (Hyper Text Coffee Pot Control Protocol). While never meant for serious use, some servers actually implement it as an Easter egg!</p>
+                    </div>
+                ` : ''}
+            `;
+
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+
+            // Add some flair for the teapot
+            if (status.special) {
+                setTimeout(() => {
+                    const teapotEmoji = body.querySelector('.status-code');
+                    teapotEmoji.style.animation = 'teapotSteam 2s ease-in-out infinite';
+                }, 500);
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            // Add closing animation
+            modalContent.style.animation = 'modalSlideOut 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+            modal.style.animation = 'modalFadeOut 0.4s ease-out forwards';
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.style.animation = '';
+                modalContent.style.animation = '';
+                document.body.style.overflow = 'auto';
+            }, 400);
+        }
+
+        // Add modal closing animations
+        if (!document.getElementById('modal-close-animations')) {
+            const style = document.createElement('style');
+            style.id = 'modal-close-animations';
+            style.textContent = `
+                @keyframes modalFadeOut {
+                    from { opacity: 1; }
+                    to { opacity: 0; }
+                }
+                
+                @keyframes modalSlideOut {
+                    from { 
+                        transform: translate(-50%, -50%) scale(1);
+                        opacity: 1;
+                    }
+                    to { 
+                        transform: translate(-50%, -50%) scale(0.9);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function getExampleResponse(status) {
+            const examples = {
+                200: '{"message": "Request successful", "data": {...}}',
+                201: '{"message": "Resource created", "id": 12345}',
+                400: '{"error": "Invalid request format"}',
+                401: '{"error": "Authentication required"}',
+                404: '{"error": "Resource not found"}',
+                418: '{"error": "Short and stout", "tip": "Here is my handle, here is my spout"}',
+                500: '{"error": "Internal server error", "reference": "ERR-2024-001"}'
+            };
+            return examples[status.code] || '{"status": "' + status.name.toLowerCase().replace(/\s+/g, '_') + '"}';
+        }
+
+        function getCategoryDescription(category) {
+            const descriptions = {
+                '1xx': 'Informational - Request received, continuing process',
+                '2xx': 'Success - Request successfully received, understood, and accepted',
+                '3xx': 'Redirection - Further action must be taken to complete the request',
+                '4xx': 'Client Error - Request contains bad syntax or cannot be fulfilled',
+                '5xx': 'Server Error - Server failed to fulfill an apparently valid request'
+            };
+            return descriptions[category] || 'Unknown category';
+        }
+
+        function isCacheable(code) {
+            const cacheableCodes = [200, 203, 204, 206, 300, 301, 404, 405, 410, 414, 501];
+            return cacheableCodes.includes(code);
+        }
+
+        function isSafeMethod(code) {
+            // This is a simplification - safe methods are more about the HTTP method than the status code
+            return code >= 200 && code < 300;
+        }
+
+        function updateStats() {
+            const filteredCodes = filterStatusCodes();
+            document.getElementById('totalCodes').textContent = statusCodes.length;
+            document.getElementById('visibleCodes').textContent = filteredCodes.length;
+            
+            const categories = new Set(filteredCodes.map(s => s.category));
+            document.getElementById('categoryCount').textContent = categories.size;
+        }
+
+        function updateScrollProgress() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollProgress = (scrollTop / scrollHeight) * 100;
+            document.getElementById('scrollProgress').style.width = scrollProgress + '%';
+        }
+
+        // Add some interactive Easter eggs
+        document.addEventListener('DOMContentLoaded', function() {
+            // Konami code for special effect
+            let konamiCode = [];
+            const konamiSequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+            
+            document.addEventListener('keydown', function(e) {
+                konamiCode.push(e.code);
+                if (konamiCode.length > konamiSequence.length) {
+                    konamiCode.shift();
+                }
+                
+                if (konamiCode.length === konamiSequence.length && 
+                    konamiCode.every((code, index) => code === konamiSequence[index])) {
+                    activateKonamiMode();
+                }
+            });
+        });
+
+        function activateKonamiMode() {
+            // Add rainbow animation to all status codes
+            const statusCards = document.querySelectorAll('.status-card');
+            statusCards.forEach(card => {
+                card.style.animation = 'rainbow 2s ease-in-out infinite';
+            });
+            
+            // Add rainbow keyframes if they don't exist
+            if (!document.getElementById('rainbow-style')) {
+                const style = document.createElement('style');
+                style.id = 'rainbow-style';
+                style.textContent = `
+                    @keyframes rainbow {
+                        0% { filter: hue-rotate(0deg); }
+                        100% { filter: hue-rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Show a fun message
+            const teapotCard = document.querySelector('.teapot');
+            if (teapotCard) {
+                teapotCard.classList.add('pulse-animation');
+                setTimeout(() => teapotCard.classList.remove('pulse-animation'), 3000);
+            }
+            
+            // Create temporary notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(45deg, #ff006e, #00d4ff);
+                color: white;
+                padding: 2rem;
+                border-radius: 15px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                z-index: 9999;
+                text-align: center;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            `;
+            notification.innerHTML = '🌈 RAINBOW MODE ACTIVATED! 🫖<br><small>The teapot approves!</small>';
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Add smooth scrolling behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Performance optimization: Lazy loading for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '50px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, observerOptions);
+
+        // Add CSS for lazy animations
+        const lazyStyle = document.createElement('style');
+        lazyStyle.textContent = `
+            .animate-in {
+                animation: slideInUp 0.6s ease-out forwards;
+            }
+            
+            @keyframes slideInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(lazyStyle);
+    </script>
+</body>
+</html>
