@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Status Code Visualizer | Professional Edition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4285f4;
+            --success: #34a853;
+            --warning: #fbbc05;
+            --danger: #ea4335;
+            --info: #673ab7;
+            --light: #f8f9fa;
+            --dark: #202124;
+            --gray: #5f6368;
+            --gradient-start: #4285f4;
+            --gradient-end: #34a853;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .dark-mode {
+            --light: #202124;
+            --dark: #f8f9fa;
+            --gray: #9aa0a6;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.24);
+            --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: var(--dark);
+            transition: var(--transition);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: var(--transition);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3.2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.25rem;
+            max-width: 700px;
+            margin: 0 auto 1.5rem;
+            font-weight: 400;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-container {
+            max-width: 350px;
+            margin: 0 auto;
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.8rem 1.2rem 0.8rem 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .utility-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .utility-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .utility-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1.2rem;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            padding: 2rem 0;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .status-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--success), var(--warning), var(--danger));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .status-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .status-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .status-code {
+            font-size: 3.2rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-name {
+            font-size: 1.4rem;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .status-description {
+            color: var(--gray);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .status-category {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .category-1xx { background: #e8f4fd; color: #1e88e5; }
+        .category-2xx { background: #e8f5e8; color: #43a047; }
+        .category-3xx { background: #fff3e0; color: #fb8c00; }
+        .category-4xx { background: #ffebee; color: #e53935; }
+        .category-5xx { background: #f3e5f5; color: #8e24aa; }
+
+        .visual-metaphor {
+            margin: 1.5rem 0;
+            text-align: center;
+            font-size: 4.5rem;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Special animations */
+        .bounce { animation: bounce 2s infinite; }
+        .spin { animation: spin 3s linear infinite; }
+        .pulse { animation: pulse 2s infinite; }
+        .shake { animation: shake 0.5s infinite; }
+        .wiggle { animation: wiggle 1s infinite; }
+        .tada { animation: tada 1.5s infinite; }
+        .heartbeat { animation: heartbeat 1.5s infinite; }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-15px); }
+            60% { transform: translateY(-7px); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+            20%, 40%, 60%, 80% { transform: translateX(3px); }
+        }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(5deg); }
+            75% { transform: rotate(-5deg); }
+        }
+
+        @keyframes tada {
+            0% { transform: scale(1); }
+            10%, 20% { transform: scale(0.9) rotate(-3deg); }
+            30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
+            40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.3); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.3); }
+            70% { transform: scale(1); }
+        }
+
+        /* Special teapot styling */
+        .teapot-card {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            border: 3px solid #ff6b9d;
+            position: relative;
+        }
+
+        .teapot-card::after {
+            content: '✨';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.8rem;
+            animation: pulse 1s infinite;
+        }
+
+        .teapot-visual {
+            font-size: 5.5rem;
+            animation: tada 2s infinite;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: modalFadeIn 0.3s ease-out;
+            padding: 1rem;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(8px); }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            margin: 2rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: modalSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalSlideIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(-50px) scale(0.9); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--gray);
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.15);
+            transform: rotate(90deg);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .modal-body {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        .modal-visual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-emoji {
+            font-size: 6rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-details {
+            color: var(--gray);
+        }
+
+        .modal-details h3 {
+            color: var(--dark);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .modal-details p {
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-tech-details {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-top: 1.5rem;
+        }
+
+        .modal-tech-details h4 {
+            color: var(--dark);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .modal-tech-details ul {
+            list-style: none;
+        }
+
+        .modal-tech-details li {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .modal-tech-details li i {
+            margin-right: 0.5rem;
+            color: var(--primary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin-top: 2rem;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            }
+        }
+
+        @media (max-width: 992px) {
+            .header h1 {
+                font-size: 2.8rem;
+            }
+            
+            .modal-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.4rem;
+            }
+            
+            .header p {
+                font-size: 1.1rem;
+            }
+            
+            .gallery {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .utility-buttons {
+                margin-left: 0;
+                margin-top: 1rem;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .modal-content {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .status-code {
+                font-size: 2.8rem;
+            }
+            
+            .visual-metaphor {
+                font-size: 3.5rem;
+                height: 70px;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .header, .controls, .footer {
+                display: none;
+            }
+            
+            .gallery {
+                display: block;
+                padding: 0;
+            }
+            
+            .status-card {
+                break-inside: avoid;
+                margin-bottom: 1rem;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HTTP Status Code Visualizer</h1>
+            <p>An interactive journey through the language of the web</p>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalCodes">0</div>
+                    <div class="stat-label">Status Codes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="visibleCodes">0</div>
+                    <div class="stat-label">Visible</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="categories">5</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="favorites">0</div>
+                    <div class="stat-label">Favorites</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="filter-btn active" data-filter="all">
+                    <i class="fas fa-layer-group"></i> All
+                </button>
+                <button class="filter-btn" data-filter="1xx">
+                    <i class="fas fa-info-circle"></i> 1xx Informational
+                </button>
+                <button class="filter-btn" data-filter="2xx">
+                    <i class="fas fa-check-circle"></i> 2xx Success
+                </button>
+                <button class="filter-btn" data-filter="3xx">
+                    <i class="fas fa-exchange-alt"></i> 3xx Redirection
+                </button>
+                <button class="filter-btn" data-filter="4xx">
+                    <i class="fas fa-exclamation-circle"></i> 4xx Client Error
+                </button>
+                <button class="filter-btn" data-filter="5xx">
+                    <i class="fas fa-exclamation-triangle"></i> 5xx Server Error
+                </button>
+                
+                <div class="utility-buttons">
+                    <button class="utility-btn" id="darkModeToggle" title="Toggle Dark Mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="utility-btn" id="printBtn" title="Print">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <button class="utility-btn" id="exportBtn" title="Export Data">
+                        <i class="fas fa-file-export"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search status codes..." id="searchInput">
+            </div>
+        </div>
+
+        <div class="gallery" id="gallery"></div>
+
+        <div class="footer">
+            <p>Made with <i class="fas fa-heart" style="color: #ea4335;"></i> for Google Recruiters | HTTP Status Code Visualizer v2.0</p>
+            <p>Includes all standard HTTP status codes with interactive visualizations</p>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced status codes data with more details
+        const statusCodes = [
+            // 1xx Informational
+            { 
+                code: 100, 
+                name: 'Continue', 
+                description: 'The server has received the request headers and the client should proceed to send the request body.', 
+                emoji: '🏃', 
+                animation: 'bounce', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.2.1',
+                methods: 'All'
+            },
+            { 
+                code: 101, 
+                name: 'Switching Protocols', 
+                description: 'The requester has asked the server to switch protocols and the server has agreed to do so.', 
+                emoji: '🔄', 
+                animation: 'spin', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.2.2',
+                methods: 'All'
+            },
+            { 
+                code: 102, 
+                name: 'Processing', 
+                description: 'A WebDAV request may contain many sub-requests involving file operations, requiring a long time to complete the request.', 
+                emoji: '⚙️', 
+                animation: 'spin', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC2518, Section 10.1',
+                methods: 'All'
+            },
+            { 
+                code: 103, 
+                name: 'Early Hints', 
+                description: 'Used to return some response headers before final HTTP message.', 
+                emoji: '🔔', 
+                animation: 'pulse', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC8297',
+                methods: 'All'
+            },
+            
+            // 2xx Success
+            { 
+                code: 200, 
+                name: 'OK', 
+                description: 'The request has succeeded. The information returned with the response is dependent on the method used in the request.', 
+                emoji: '✅', 
+                animation: 'pulse', 
+                category: '2xx',
+                cacheable: true,
+                rfc: 'RFC7231, Section 6.3.1',
+                methods: 'GET, HEAD, POST, PUT, DELETE'
+            },
+            { 
+                code: 201, 
+                name: 'Created', 
+                description: 'The request has been fulfilled and has resulted in one or more new resources being created.', 
+                emoji: '🎉', 
+                animation: 'bounce', 
+                category: '2xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.3.2',
+                methods: 'POST, PUT'
+            },
+            { 
+                code: 202, 
+                name: 'Accepted', 
+                description: 'The request has been accepted for processing, but the processing has not been completed.', 
+                emoji: '👍', 
+                animation: 'pulse', 
+                category: '2xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.3.3',
+                methods: 'POST, PUT, DELETE'
+            },
+            { 
+                code: 204, 
+                name: 'No Content', 
+                description: 'The server successfully processed the request and is not returning any content.', 
+                emoji: '🤐', 
+                animation: '', 
+                category: '2xx',
+                cacheable: true,
+                rfc: 'RFC7231, Section 6.3.5',
+                methods: 'PUT, DELETE'
+            },
+            { 
+                code: 206, 
+                name: 'Partial Content', 
+                description: 'The server is delivering only part of the resource due to a range header sent by the client.', 
+                emoji: '🍕', 
+                animation: 'wiggle', 
+                category: '2xx',
+                cacheable: true,
+                rfc: 'RFC7233, Section 4.1',
+                methods: 'GET, HEAD'
+            },
+            
+            // 3xx Redirection
+            { 
+                code: 301, 
+                name: 'Moved Permanently', 
+                description: 'The URL of the requested resource has been changed permanently. The new URL is given in the response.', 
+                emoji: '📦', 
+                animation: 'bounce', 
+                category: '3xx',
+                cacheable: true,
+                rfc: 'RFC7231, Section 6.4.2',
+                methods: 'All'
+            },
+            { 
+                code: 302, 
+                name: 'Found', 
+                description: 'The URI of requested resource has been changed temporarily. Further changes in the URI might be made in the future.', 
+                emoji: '🔍', 
+                animation: 'wiggle', 
+                category: '3xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.4.3',
+                methods: 'All'
+            },
+            { 
+                code: 304, 
+                name: 'Not Modified', 
+                description: 'A conditional GET or HEAD request has been received and would have resulted in a 200 OK response if it were not for the fact that the condition evaluated to false.', 
+                emoji: '📋', 
+                animation: '', 
+                category: '3xx',
+                cacheable: true,
+                rfc: 'RFC7232, Section 4.1',
+                methods: 'GET, HEAD'
+            },
+            { 
+                code: 307, 
+                name: 'Temporary Redirect', 
+                description: 'The target resource resides temporarily under a different URI and the user agent MUST NOT change the request method if it performs an automatic redirection to that URI.', 
+                emoji: '🔀', 
+                animation: 'bounce', 
+                category: '3xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.4.7',
+                methods: 'All'
+            },
+            { 
+                code: 308, 
+                name: 'Permanent Redirect', 
+                description: 'The target resource has been assigned a new permanent URI and any future references to this resource ought to use one of the enclosed URIs.', 
+                emoji: '➡️', 
+                animation: 'bounce', 
+                category: '3xx',
+                cacheable: true,
+                rfc: 'RFC7538, Section 3',
+                methods: 'All'
+            },
+            
+            // 4xx Client Error
+            { 
+                code: 400, 
+                name: 'Bad Request', 
+                description: 'The server cannot or will not process the request due to something that is perceived to be a client error.', 
+                emoji: '❌', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.5.1',
+                methods: 'All'
+            },
+            { 
+                code: 401, 
+                name: 'Unauthorized', 
+                description: 'The request has not been applied because it lacks valid authentication credentials for the target resource.', 
+                emoji: '🔐', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7235, Section 3.1',
+                methods: 'All'
+            },
+            { 
+                code: 403, 
+                name: 'Forbidden', 
+                description: 'The server understood the request but refuses to authorize it.', 
+                emoji: '⛔', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.5.3',
+                methods: 'All'
+            },
+            { 
+                code: 404, 
+                name: 'Not Found', 
+                description: 'The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.', 
+                emoji: '🤷', 
+                animation: 'wiggle', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.5.4',
+                methods: 'All'
+            },
+            { 
+                code: 405, 
+                name: 'Method Not Allowed', 
+                description: 'The method received in the request-line is known by the origin server but not supported by the target resource.', 
+                emoji: '🚫', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.5.5',
+                methods: 'All'
+            },
+            { 
+                code: 408, 
+                name: 'Request Timeout', 
+                description: 'The server did not receive a complete request message within the time that it was prepared to wait.', 
+                emoji: '⏰', 
+                animation: 'pulse', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.5.7',
+                methods: 'All'
+            },
+            { 
+                code: 409, 
+                name: 'Conflict', 
+                description: 'The request could not be completed due to a conflict with the current state of the target resource.', 
+                emoji: '⚔️', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.5.8',
+                methods: 'PUT, DELETE, PATCH'
+            },
+            { 
+                code: 410, 
+                name: 'Gone', 
+                description: 'The target resource is no longer available at the origin server and this condition is likely to be permanent.', 
+                emoji: '👻', 
+                animation: 'wiggle', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.5.9',
+                methods: 'All'
+            },
+            { 
+                code: 418, 
+                name: "I'm a teapot", 
+                description: 'The server refuses to brew coffee because it is, permanently, a teapot. This is a reference to the 1998 April Fools\' joke "Hyper Text Coffee Pot Control Protocol".', 
+                emoji: '🫖', 
+                animation: 'wiggle', 
+                category: '4xx', 
+                special: true,
+                cacheable: false,
+                rfc: 'RFC2324, Section 2.3.2',
+                methods: 'BREW'
+            },
+            { 
+                code: 429, 
+                name: 'Too Many Requests', 
+                description: 'The user has sent too many requests in a given amount of time ("rate limiting").', 
+                emoji: '🚦', 
+                animation: 'pulse', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC6585, Section 4',
+                methods: 'All'
+            },
+            
+            // 5xx Server Error
+            { 
+                code: 500, 
+                name: 'Internal Server Error', 
+                description: 'The server encountered an unexpected condition that prevented it from fulfilling the request.', 
+                emoji: '💥', 
+                animation: 'shake', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.6.1',
+                methods: 'All'
+            },
+            { 
+                code: 501, 
+                name: 'Not Implemented', 
+                description: 'The server does not support the functionality required to fulfill the request.', 
+                emoji: '🚧', 
+                animation: 'wiggle', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.6.2',
+                methods: 'All'
+            },
+            { 
+                code: 502, 
+                name: 'Bad Gateway', 
+                description: 'The server, while acting as a gateway or proxy, received an invalid response from the upstream server it accessed in attempting to fulfill the request.', 
+                emoji: '🌉', 
+                animation: 'shake', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.6.3',
+                methods: 'All'
+            },
+            { 
+                code: 503, 
+                name: 'Service Unavailable', 
+                description: 'The server is currently unable to handle the request due to temporary overloading or maintenance of the server.', 
+                emoji: '🔧', 
+                animation: 'wiggle', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.6.4',
+                methods: 'All'
+            },
+            { 
+                code: 504, 
+                name: 'Gateway Timeout', 
+                description: 'The server, while acting as a gateway or proxy, did not receive a timely response from the upstream server.', 
+                emoji: '⏳', 
+                animation: 'pulse', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.6.5',
+                methods: 'All'
+            },
+            { 
+                code: 505, 
+                name: 'HTTP Version Not Supported', 
+                description: 'The server does not support, or refuses to support, the major version of HTTP that was used in the request message.', 
+                emoji: '📊', 
+                animation: 'shake', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231, Section 6.6.6',
+                methods: 'All'
+            }
+        ];
+
+        // App state
+        let currentFilter = 'all';
+        let searchTerm = '';
+        let favorites = JSON.parse(localStorage.getItem('httpStatusFavorites')) || [];
+        let darkMode = localStorage.getItem('darkMode') === 'true';
+
+        // DOM Elements
+        const gallery = document.getElementById('gallery');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modalContent');
+        const modalClose = document.getElementById('modalClose');
+        const searchInput = document.getElementById('searchInput');
+        const totalCodesEl = document.getElementById('totalCodes');
+        const visibleCodesEl = document.getElementById('visibleCodes');
+        const favoritesEl = document.getElementById('favorites');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const printBtn = document.getElementById('printBtn');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // Initialize the app
+        function init() {
+            renderGallery();
+            setupEventListeners();
+            updateStats();
+            updateDarkMode();
+        }
+
+        // Create a status card element
+        function createStatusCard(status) {
+            const card = document.createElement('div');
+            const isTeapot = status.code === 418;
+            const isFavorite = favorites.includes(status.code);
+            
+            card.className = `status-card ${isTeapot ? 'teapot-card' : ''}`;
+            card.dataset.category = status.category;
+            card.dataset.code = status.code;
+            
+            card.innerHTML = `
+                <div class="status-code">${status.code}</div>
+                <div class="status-name">${status.name}</div>
+                <div class="visual-metaphor ${status.animation} ${isTeapot ? 'teapot-visual' : ''}">
+                    ${status.emoji}
+                </div>
+                <div class="status-description">${status.description.substring(0, 120)}${status.description.length > 120 ? '...' : ''}</div>
+                <div class="status-category category-${status.category}">${status.category} ${getCategoryName(status.category)}</div>
+                <div class="favorite-icon" style="position: absolute; top: 1.5rem; right: 1.5rem; color: ${isFavorite ? '#ff5252' : '#ccc'};">
+                    <i class="fas fa-heart"></i>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => showModal(status));
+            
+            // Favorite toggle
+            const favoriteIcon = card.querySelector('.favorite-icon');
+            favoriteIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFavorite(status.code);
+                favoriteIcon.innerHTML = `<i class="fas fa-heart" style="color: ${favorites.includes(status.code) ? '#ff5252' : '#ccc'};"></i>`;
+                updateStats();
+            });
+            
+            return card;
+        }
+
+        // Get category name from code
+        function getCategoryName(category) {
+            const names = {
+                '1xx': 'Informational',
+                '2xx': 'Success',
+                '3xx': 'Redirection',
+                '4xx': 'Client Error',
+                '5xx': 'Server Error'
+            };
+            return names[category] || '';
+        }
+
+        // Render the gallery with filtered status codes
+        function renderGallery() {
+            gallery.innerHTML = '';
+            
+            const filteredCodes = statusCodes.filter(status => {
+                const matchesFilter = currentFilter === 'all' || status.category === currentFilter;
+                const matchesSearch = !searchTerm || 
+                    status.code.toString().includes(searchTerm) ||
+                    status.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    status.description.toLowerCase().includes(searchTerm.toLowerCase());
+                
+                return matchesFilter && matchesSearch;
+            });
+            
+            filteredCodes.forEach((status, index) => {
+                const card = createStatusCard(status);
+                gallery.appendChild(card);
+                
+                // Animate cards in with delay
+                setTimeout(() => {
+                    card.classList.add('visible');
+                }, index * 50);
+            });
+            
+            updateStats(filteredCodes.length);
+        }
+
+        // Update statistics
+        function updateStats(visibleCount = null) {
+            totalCodesEl.textContent = statusCodes.length;
+            if (visibleCount !== null) {
+                visibleCodesEl.textContent = visibleCount;
+            }
+            favoritesEl.textContent = favorites.length;
+        }
+
+        // Show modal with status code details
+        function showModal(status) {
+            const isFavorite = favorites.includes(status.code);
+            
+            modalContent.innerHTML = `
+                <div class="modal-header">
+                    <div class="status-code">${status.code}</div>
+                    <h2>${status.name}</h2>
+                    <div class="status-category category-${status.category}">${status.category} ${getCategoryName(status.category)}</div>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="modal-visual">
+                        <div class="modal-emoji ${status.animation}">
+                            ${status.emoji}
+                        </div>
+                        <button class="filter-btn" id="modalFavoriteBtn">
+                            <i class="fas fa-heart" style="color: ${isFavorite ? '#ff5252' : '#ccc'};"></i>
+                            ${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                        </button>
+                    </div>
+                    
+                    <div class="modal-details">
+                        <h3>Description</h3>
+                        <p>${status.description}</p>
+                        
+                        ${status.code === 418 ? 
+                            `<div style="background: #ffeaa7; padding: 1rem; border-radius: 10px; margin: 1.5rem 0;">
+                                <h4><i class="fas fa-egg"></i> Easter Egg Found!</h4>
+                                <p>This is the famous teapot status code from RFC 2324 (Hyper Text Coffee Pot Control Protocol)!</p>
+                            </div>` : ''}
+                        
+                        <div class="modal-tech-details">
+                            <h4><i class="fas fa-info-circle"></i> Technical Details</h4>
+                            <ul>
+                                <li><i class="fas fa-file-alt"></i> <strong>RFC:</strong> ${status.rfc}</li>
+                                <li><i class="fas fa-database"></i> <strong>Cacheable:</strong> ${status.cacheable ? 'Yes' : 'No'}</li>
+                                <li><i class="fas fa-code"></i> <strong>Methods:</strong> ${status.methods}</li>
+                                <li><i class="fas fa-tags"></i> <strong>Category:</strong> ${getCategoryName(status.category)}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add event listener to favorite button in modal
+            const modalFavoriteBtn = document.getElementById('modalFavoriteBtn');
+            modalFavoriteBtn.addEventListener('click', () => {
+                toggleFavorite(status.code);
+                const isNowFavorite = favorites.includes(status.code);
+                modalFavoriteBtn.innerHTML = `<i class="fas fa-heart" style="color: ${isNowFavorite ? '#ff5252' : '#ccc'};"></i> ${isNowFavorite ? 'Remove from Favorites' : 'Add to Favorites'}`;
+                updateStats();
+                
+                // Update the card in the gallery if it exists
+                const card = document.querySelector(`.status-card[data-code="${status.code}"]`);
+                if (card) {
+                    const favoriteIcon = card.querySelector('.favorite-icon');
+                    if (favoriteIcon) {
+                        favoriteIcon.innerHTML = `<i class="fas fa-heart" style="color: ${isNowFavorite ? '#ff5252' : '#ccc'};"></i>`;
+                    }
+                }
+            });
+            
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close modal
+        function closeModal() {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Toggle favorite status
+        function toggleFavorite(code) {
+            if (favorites.includes(code)) {
+                favorites = favorites.filter(fav => fav !== code);
+            } else {
+                favorites.push(code);
+            }
+            localStorage.setItem('httpStatusFavorites', JSON.stringify(favorites));
+        }
+
+        // Toggle dark mode
+        function toggleDarkMode() {
+            darkMode = !darkMode;
+            localStorage.setItem('darkMode', darkMode);
+            updateDarkMode();
+        }
+
+        // Update dark mode based on current state
+        function updateDarkMode() {
+            if (darkMode) {
+                document.body.classList.add('dark-mode');
+                darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            } else {
+                document.body.classList.remove('dark-mode');
+                darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+            }
+        }
+
+        // Export data as JSON
+        function exportData() {
+            const dataStr = JSON.stringify(statusCodes, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'http-status-codes.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Filter buttons
+            document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelector('.filter-btn.active').classList.remove('active');
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderGallery();
+                });
+            });
+            
+            // Search input with debouncing
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTerm = e.target.value;
+                
+                searchTimeout = setTimeout(() => {
+                    renderGallery();
+                }, 300);
+            });
+            
+            // Modal close
+            modalClose.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            // Dark mode toggle
+            darkModeToggle.addEventListener('click', toggleDarkMode);
+            
+            // Print button
+            printBtn.addEventListener('click', () => {
+                window.print();
+            });
+            
+            // Export button
+            exportBtn.addEventListener('click', exportData);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+                if (e.key === '/' && e.target.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+                
+                // Number keys for quick filtering
+                const numKey = parseInt(e.key);
+                if (numKey >= 1 && numKey <= 5 && e.target.tagName !== 'INPUT') {
+                    const categories = ['1xx', '2xx', '3xx', '4xx', '5xx'];
+                    const btn = document.querySelector(`[data-filter="${categories[numKey-1]}"]`);
+                    if (btn) btn.click();
+                }
+                if (e.key === '0' && e.target.tagName !== 'INPUT') {
+                    document.querySelector('[data-filter="all"]').click();
+                }
+            });
+            
+            // Add tooltip functionality
+            document.addEventListener('mouseover', (e) => {
+                if (e.target.classList.contains('filter-btn')) {
+                    const category = e.target.dataset.filter;
+                    if (category !== 'all') {
+                        const num = category.charAt(0);
+                        e.target.title = `Press ${num} for quick access`;
+                    } else {
+                        e.target.title = 'Press 0 for quick access';
+                    }
+                }
+            });
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
