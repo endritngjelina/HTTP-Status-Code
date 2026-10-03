@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Status Code Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --redirect-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --client-error-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --server-error-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            --teapot-gradient: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #e17055 100%);
+            --dark-bg: #0a0e27;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+            --shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            --glow: 0 0 30px rgba(102, 126, 234, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(255, 107, 107, 0.1) 0%, transparent 50%);
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { transform: translateX(0px) translateY(0px) scale(1); }
+            33% { transform: translateX(-20px) translateY(-10px) scale(1.05); }
+            66% { transform: translateX(20px) translateY(10px) scale(0.95); }
+        }
+
+        header {
+            text-align: center;
+            padding: 4rem 2rem 2rem;
+            background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 100%);
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: var(--glow);
+            transform: translateY(-2px);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.8rem 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-weight: 500;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--primary-gradient);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 15px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 2rem;
+            padding: 0 2rem 4rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .status-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(15px);
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .status-card:hover::before {
+            left: 100%;
+        }
+
+        .status-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: var(--shadow), var(--glow);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .status-code {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .status-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            flex-grow: 1;
+        }
+
+        .status-category {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 1rem;
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .status-icon {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+
+        .status-card:hover .status-icon {
+            opacity: 0.8;
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        /* Category-specific styling */
+        .category-1xx { background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); }
+        .category-2xx { background: linear-gradient(135deg, rgba(75, 192, 192, 0.1), rgba(0, 242, 254, 0.1)); }
+        .category-3xx { background: linear-gradient(135deg, rgba(67, 233, 123, 0.1), rgba(56, 249, 215, 0.1)); }
+        .category-4xx { background: linear-gradient(135deg, rgba(250, 112, 154, 0.1), rgba(254, 225, 64, 0.1)); }
+        .category-5xx { background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(238, 90, 36, 0.1)); }
+
+        .category-1xx .status-code { background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .category-2xx .status-code { background: var(--success-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .category-3xx .status-code { background: var(--redirect-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .category-4xx .status-code { background: var(--client-error-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .category-5xx .status-code { background: var(--server-error-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Special 418 Teapot styling */
+        .teapot-special {
+            background: linear-gradient(135deg, rgba(255, 234, 167, 0.2), rgba(250, 177, 160, 0.2), rgba(225, 112, 85, 0.1)) !important;
+            border: 2px solid rgba(255, 234, 167, 0.3) !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .teapot-special::after {
+            content: '🫖';
+            position: absolute;
+            font-size: 8rem;
+            opacity: 0.1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            z-index: 0;
+        }
+
+        .teapot-special .status-code {
+            background: var(--teapot-gradient) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            position: relative;
+            z-index: 1;
+        }
+
+        .teapot-special:hover {
+            animation: teapotWiggle 0.5s ease-in-out;
+            box-shadow: 0 0 50px rgba(255, 234, 167, 0.4) !important;
+        }
+
+        @keyframes teapotWiggle {
+            0%, 100% { transform: translateY(-10px) scale(1.02) rotate(0deg); }
+            25% { transform: translateY(-12px) scale(1.03) rotate(1deg); }
+            75% { transform: translateY(-8px) scale(1.01) rotate(-1deg); }
+        }
+
+        .steam {
+            position: absolute;
+            top: 1rem;
+            right: 2rem;
+            font-size: 1.5rem;
+            animation: steamRise 2s ease-in-out infinite;
+            z-index: 1;
+        }
+
+        @keyframes steamRise {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
+            50% { transform: translateY(-10px) rotate(5deg); opacity: 1; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close:hover {
+            color: var(--text-primary);
+            transform: scale(1.1);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .scroll-progress {
+            height: 100%;
+            background: var(--primary-gradient);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 100%);
+            margin-top: 2rem;
+        }
+
+        .footer-content {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .gallery { 
+                grid-template-columns: 1fr;
+                padding: 0 1rem 2rem; 
+            }
+            .controls { 
+                flex-direction: column; 
+                align-items: center;
+                padding: 0 1rem;
+            }
+            .filter-buttons { justify-content: center; }
+            .stats-bar { 
+                flex-direction: column; 
+                gap: 1rem;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+    <div class="scroll-indicator">
+        <div class="scroll-progress" id="scrollProgress"></div>
+    </div>
+
+    <header>
+        <h1>HTTP Status Visualizer</h1>
+        <p class="subtitle">
+            Explore the complete collection of HTTP status codes with interactive animations, 
+            detailed explanations, and professional insights for developers.
+        </p>
+        
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search status codes..." />
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-category="all">All</button>
+                <button class="filter-btn" data-category="1xx">1xx Info</button>
+                <button class="filter-btn" data-category="2xx">2xx Success</button>
+                <button class="filter-btn" data-category="3xx">3xx Redirect</button>
+                <button class="filter-btn" data-category="4xx">4xx Client Error</button>
+                <button class="filter-btn" data-category="5xx">5xx Server Error</button>
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-number" id="totalCodes">0</div>
+                <div class="stat-label">Total Codes</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="visibleCodes">0</div>
+                <div class="stat-label">Visible</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="currentCategory">All</div>
+                <div class="stat-label">Category</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="gallery" id="gallery">
+        <!-- Status codes will be dynamically inserted here -->
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>Professional HTTP Status Code Visualizer • Built with modern web technologies</p>
+            <p>Comprehensive reference for developers and technical professionals</p>
+        </div>
+    </footer>
+
+    <!-- Modal for detailed view -->
+    <div class="modal" id="statusModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Status Code Details</h2>
+                <button class="close" id="closeModal">&times;</button>
+            </div>
+            <div id="modalBody">
+                <!-- Content will be dynamically inserted -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Comprehensive HTTP Status Codes Database
+        const statusCodes = [
+            // 1xx Informational
+            { code: 100, name: "Continue", description: "Server received request headers, client should proceed with request body", category: "1xx", icon: "⏳", rfc: "RFC 7231", useCases: "Large file uploads, form submissions" },
+            { code: 101, name: "Switching Protocols", description: "Server switching protocols per client request", category: "1xx", icon: "🔄", rfc: "RFC 7231", useCases: "WebSocket upgrades, HTTP/2 upgrades" },
+            { code: 102, name: "Processing", description: "Server processing request (prevents timeout)", category: "1xx", icon: "⚙️", rfc: "RFC 2518", useCases: "WebDAV operations, long-running processes" },
+            { code: 103, name: "Early Hints", description: "Return hints to help client prepare connection", category: "1xx", icon: "💡", rfc: "RFC 8297", useCases: "Preloading resources, DNS prefetching" },
+
+            // 2xx Success
+            { code: 200, name: "OK", description: "Request succeeded and response contains requested data", category: "2xx", icon: "✅", rfc: "RFC 7231", useCases: "GET requests, successful operations" },
+            { code: 201, name: "Created", description: "Request succeeded and new resource was created", category: "2xx", icon: "🆕", rfc: "RFC 7231", useCases: "POST requests, resource creation" },
+            { code: 202, name: "Accepted", description: "Request accepted but processing not completed", category: "2xx", icon: "📝", rfc: "RFC 7231", useCases: "Async processing, batch operations" },
+            { code: 203, name: "Non-Authoritative Information", description: "Success but info from third-party source", category: "2xx", icon: "ℹ️", rfc: "RFC 7231", useCases: "Proxy responses, cached data" },
+            { code: 204, name: "No Content", description: "Success but no content to return", category: "2xx", icon: "🔳", rfc: "RFC 7231", useCases: "DELETE operations, PUT updates" },
+            { code: 205, name: "Reset Content", description: "Success, client should reset document view", category: "2xx", icon: "🔄", rfc: "RFC 7231", useCases: "Form resets, UI refresh" },
+            { code: 206, name: "Partial Content", description: "Partial resource delivered (range request)", category: "2xx", icon: "📄", rfc: "RFC 7233", useCases: "Video streaming, file downloads" },
+
+            // 3xx Redirection
+            { code: 300, name: "Multiple Choices", description: "Multiple options available for resource", category: "3xx", icon: "🎯", rfc: "RFC 7231", useCases: "Content negotiation, format options" },
+            { code: 301, name: "Moved Permanently", description: "Resource permanently moved to new location", category: "3xx", icon: "➡️", rfc: "RFC 7231", useCases: "URL restructuring, domain changes" },
+            { code: 302, name: "Found", description: "Resource temporarily at different location", category: "3xx", icon: "🔍", rfc: "RFC 7231", useCases: "Temporary redirects, A/B testing" },
+            { code: 303, name: "See Other", description: "Response located elsewhere, use GET", category: "3xx", icon: "👀", rfc: "RFC 7231", useCases: "Post-redirect-get pattern" },
+            { code: 304, name: "Not Modified", description: "Resource not modified since last request", category: "3xx", icon: "💾", rfc: "RFC 7232", useCases: "Caching, conditional requests" },
+            { code: 307, name: "Temporary Redirect", description: "Resource temporarily moved, keep same method", category: "3xx", icon: "🔄", rfc: "RFC 7231", useCases: "Maintenance redirects" },
+            { code: 308, name: "Permanent Redirect", description: "Resource permanently moved, keep same method", category: "3xx", icon: "🏠", rfc: "RFC 7238", useCases: "HTTPS redirects, API versioning" },
+
+            // 4xx Client Errors
+            { code: 400, name: "Bad Request", description: "Server cannot process due to client error", category: "4xx", icon: "❌", rfc: "RFC 7231", useCases: "Malformed requests, syntax errors" },
+            { code: 401, name: "Unauthorized", description: "Authentication required to access resource", category: "4xx", icon: "🔐", rfc: "RFC 7235", useCases: "Login required, API authentication" },
+            { code: 402, name: "Payment Required", description: "Reserved for future use (payment systems)", category: "4xx", icon: "💳", rfc: "RFC 7231", useCases: "Subscription services, micropayments" },
+            { code: 403, name: "Forbidden", description: "Server understood but refuses to authorize", category: "4xx", icon: "🚫", rfc: "RFC 7231", useCases: "Insufficient permissions, IP blocking" },
+            { code: 404, name: "Not Found", description: "Requested resource could not be found", category: "4xx", icon: "🔍", rfc: "RFC 7231", useCases: "Missing pages, broken links" },
+            { code: 405, name: "Method Not Allowed", description: "HTTP method not supported for resource", category: "4xx", icon: "🚷", rfc: "RFC 7231", useCases: "POST on read-only endpoints" },
+            { code: 406, name: "Not Acceptable", description: "Cannot produce response matching Accept headers", category: "4xx", icon: "🙅", rfc: "RFC 7231", useCases: "Content negotiation failures" },
+            { code: 407, name: "Proxy Authentication Required", description: "Client must authenticate with proxy", category: "4xx", icon: "🛡️", rfc: "RFC 7235", useCases: "Corporate proxy authentication" },
+            { code: 408, name: "Request Timeout", description: "Server timed out waiting for request", category: "4xx", icon: "⏰", rfc: "RFC 7231", useCases: "Slow network connections" },
+            { code: 409, name: "Conflict", description: "Request conflicts with server state", category: "4xx", icon: "⚔️", rfc: "RFC 7231", useCases: "Version conflicts, duplicate resources" },
+            { code: 410, name: "Gone", description: "Resource no longer available permanently", category: "4xx", icon: "👻", rfc: "RFC 7231", useCases: "Deleted content, deprecated APIs" },
+            { code: 411, name: "Length Required", description: "Content-Length header required", category: "4xx", icon: "📏", rfc: "RFC 7231", useCases: "POST/PUT without Content-Length" },
+            { code: 412, name: "Precondition Failed", description: "Server doesn't meet request preconditions", category: "4xx", icon: "🚦", rfc: "RFC 7232", useCases: "Conditional requests, ETags" },
+            { code: 413, name: "Payload Too Large", description: "Request entity larger than server limits", category: "4xx", icon: "📦", rfc: "RFC 7231", useCases: "File upload limits, request size" },
+            { code: 414, name: "URI Too Long", description: "Request URI longer than server can process", category: "4xx", icon: "📏", rfc: "RFC 7231", useCases: "Long query strings, malformed URLs" },
+            { code: 415, name: "Unsupported Media Type", description: "Media type not supported by server", category: "4xx", icon: "🎭", rfc: "RFC 7231", useCases: "Wrong content type, unsupported formats" },
+            { code: 416, name: "Range Not Satisfiable", description: "Range header cannot be satisfied", category: "4xx", icon: "📊", rfc: "RFC 7233", useCases: "Invalid byte ranges, streaming" },
+            { code: 417, name: "Expectation Failed", description: "Expect header requirements not met", category: "4xx", icon: "🎯", rfc: "RFC 7231", useCases: "100-continue expectations" },
+            { code: 418, name: "I'm a teapot", description: "Server refuses to brew coffee because it's a teapot", category: "4xx", icon: "🫖", rfc: "RFC 2324", useCases: "April Fools' RFC, testing endpoints", special: true },
+            { code: 421, name: "Misdirected Request", description: "Request directed to server unable to respond", category: "4xx", icon: "🧭", rfc: "RFC 7540", useCases: "HTTP/2 connection issues" },
+            { code: 422, name: "Unprocessable Entity", description: "Syntax correct but semantically invalid", category: "4xx", icon: "🔧", rfc: "RFC 4918", useCases: "Form validation errors, WebDAV" },
+            { code: 423, name: "Locked", description: "Resource is locked", category: "4xx", icon: "🔒", rfc: "RFC 4918", useCases: "WebDAV file locking" },
+            { code: 424, name: "Failed Dependency", description: "Request failed due to previous request failure", category: "4xx", icon: "🔗", rfc: "RFC 4918", useCases: "WebDAV batch operations" },
+            { code: 425, name: "Too Early", description: "Server unwilling to process potentially replayed request", category: "4xx", icon: "⏰", rfc: "RFC 8470", useCases: "TLS early data protection" },
+            { code: 426, name: "Upgrade Required", description: "Client should switch to different protocol", category: "4xx", icon: "⬆️", rfc: "RFC 7231", useCases: "Protocol upgrades, security requirements" },
+            { code: 428, name: "Precondition Required", description: "Request must include precondition headers", category: "4xx", icon: "📋", rfc: "RFC 6585", useCases: "Lost update prevention" },
+            { code: 429, name: "Too Many Requests", description: "Client sent too many requests", category: "4xx", icon: "🚦", rfc: "RFC 6585", useCases: "Rate limiting, API quotas" },
+            { code: 431, name: "Request Header Fields Too Large", description: "Request headers are too large", category: "4xx", icon: "📄", rfc: "RFC 6585", useCases: "Cookie overflow, large headers" },
+            { code: 451, name: "Unavailable For Legal Reasons", description: "Content blocked for legal reasons", category: "4xx", icon: "⚖️", rfc: "RFC 7725", useCases: "Censorship, DMCA takedowns" },
+
+            // 5xx Server Errors
+            { code: 500, name: "Internal Server Error", description: "Server encountered unexpected condition", category: "5xx", icon: "💥", rfc: "RFC 7231", useCases: "Code errors, database failures" },
+            { code: 501, name: "Not Implemented", description: "Server doesn't support functionality required", category: "5xx", icon: "🚧", rfc: "RFC 7231", useCases: "Unimplemented HTTP methods" },
+            { code: 502, name: "Bad Gateway", description: "Server received invalid response from upstream", category: "5xx", icon: "🌐", rfc: "RFC 7231", useCases: "Proxy errors, load balancer issues" },
+            { code: 503, name: "Service Unavailable", description: "Server temporarily unavailable", category: "5xx", icon: "🔧", rfc: "RFC 7231", useCases: "Maintenance mode, overloaded servers" },
+            { code: 504, name: "Gateway Timeout", description: "Server didn't receive timely upstream response", category: "5xx", icon: "⏱️", rfc: "RFC 7231", useCases: "Slow backend services, network issues" },
+            { code: 505, name: "HTTP Version Not Supported", description: "HTTP version used in request not supported", category: "5xx", icon: "📟", rfc: "RFC 7231", useCases: "Legacy HTTP versions, protocol mismatches" },
+            { code: 506, name: "Variant Also Negotiates", description: "Server has internal configuration error", category: "5xx", icon: "🔄", rfc: "RFC 2295", useCases: "Content negotiation loops" },
+            { code: 507, name: "Insufficient Storage", description: "Server unable to store representation", category: "5xx", icon: "💾", rfc: "RFC 4918", useCases: "WebDAV storage limits, disk space" },
+            { code: 508, name: "Loop Detected", description: "Server detected infinite loop in processing", category: "5xx", icon: "🔁", rfc: "RFC 5842", useCases: "WebDAV bind loops" },
+            { code: 510, name: "Not Extended", description: "Further extensions required to fulfill request", category: "5xx", icon: "➕", rfc: "RFC 2774", useCases: "HTTP extension requirements" },
+            { code: 511, name: "Network Authentication Required", description: "Client needs to authenticate to gain network access", category: "5xx", icon: "🛜", rfc: "RFC 6585", useCases: "Captive portals, WiFi login" }
+        ];
+
+        // Application state
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let filteredCodes = [...statusCodes];
+
+        // DOM elements
+        const gallery = document.getElementById('gallery');
+        const searchInput = document.getElementById('searchInput');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const totalCodesEl = document.getElementById('totalCodes');
+        const visibleCodesEl = document.getElementById('visibleCodes');
+        const currentCategoryEl = document.getElementById('currentCategory');
+        const modal = document.getElementById('statusModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const closeModal = document.getElementById('closeModal');
+        const scrollProgress = document.getElementById('scrollProgress');
+
+        // Initialize application
+        function init() {
+            renderStatusCodes();
+            updateStats();
+            setupEventListeners();
+            setupScrollIndicator();
+        }
+
+        // Render status codes in gallery
+        function renderStatusCodes() {
+            gallery.innerHTML = '';
+            
+            filteredCodes.forEach((status, index) => {
+                const card = createStatusCard(status, index);
+                gallery.appendChild(card);
+            });
+
+            // Animate cards on load
+            const cards = gallery.querySelectorAll('.status-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('fade-in');
+                }, index * 50);
+            });
+        }
+
+        // Create individual status card
+        function createStatusCard(status, index) {
+            const card = document.createElement('div');
+            card.className = `status-card category-${status.category}`;
+            
+            // Special styling for 418 teapot
+            if (status.special) {
+                card.classList.add('teapot-special');
+            }
+
+            card.innerHTML = `
+                <div class="status-icon">${status.icon}</div>
+                ${status.special ? '<div class="steam">💨</div>' : ''}
+                <div class="status-code">${status.code}</div>
+                <div class="status-name">${status.name}</div>
+                <div class="status-description">${status.description}</div>
+                <div class="status-category">${status.category.toUpperCase()} ${getCategoryName(status.category)}</div>
+            `;
+
+            card.addEventListener('click', () => openModal(status));
+            return card;
+        }
+
+        // Get category display name
+        function getCategoryName(category) {
+            const names = {
+                '1xx': 'Informational',
+                '2xx': 'Success',
+                '3xx': 'Redirection',
+                '4xx': 'Client Error',
+                '5xx': 'Server Error'
+            };
+            return names[category] || '';
+        }
+
+        // Filter status codes
+        function filterStatusCodes() {
+            filteredCodes = statusCodes.filter(status => {
+                const matchesCategory = currentFilter === 'all' || status.category === currentFilter;
+                const matchesSearch = searchQuery === '' || 
+                    status.code.toString().includes(searchQuery) ||
+                    status.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    status.description.toLowerCase().includes(searchQuery.toLowerCase());
+                
+                return matchesCategory && matchesSearch;
+            });
+
+            renderStatusCodes();
+            updateStats();
+        }
+
+        // Update statistics
+        function updateStats() {
+            totalCodesEl.textContent = statusCodes.length;
+            visibleCodesEl.textContent = filteredCodes.length;
+            currentCategoryEl.textContent = currentFilter === 'all' ? 'All' : currentFilter.toUpperCase();
+        }
+
+        // Open detailed modal
+        function openModal(status) {
+            modalTitle.textContent = `${status.code} ${status.name}`;
+            
+            modalBody.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="font-size: 4rem;">${status.icon}</div>
+                    <div>
+                        <div style="font-size: 2.5rem; font-weight: bold; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${status.code}</div>
+                        <div style="font-size: 1.2rem; color: var(--text-secondary);">${getCategoryName(status.category)}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem; color: var(--text-primary);">Description</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6;">${status.description}</p>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem; color: var(--text-primary);">Common Use Cases</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6;">${status.useCases}</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 10px;">
+                        <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">RFC Reference</h4>
+                        <p style="color: var(--text-secondary);">${status.rfc}</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 10px;">
+                        <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">Category</h4>
+                        <p style="color: var(--text-secondary);">${status.category} ${getCategoryName(status.category)}</p>
+                    </div>
+                </div>
+
+                ${status.special ? `
+                    <div style="background: linear-gradient(135deg, rgba(255, 234, 167, 0.1), rgba(250, 177, 160, 0.1)); 
+                                border: 1px solid rgba(255, 234, 167, 0.3); 
+                                padding: 1.5rem; 
+                                border-radius: 15px; 
+                                text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🫖</div>
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">Special Easter Egg Status!</h4>
+                        <p style="color: var(--text-secondary);">
+                            This whimsical status code was introduced in RFC 2324 as an April Fools' joke. 
+                            It's part of the Hyper Text Coffee Pot Control Protocol (HTCPCP/1.0) and has become 
+                            a beloved part of web development culture.
+                        </p>
+                    </div>
+                ` : ''}
+
+                <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                    <h4 style="margin-bottom: 1rem; color: var(--text-primary);">Developer Tips</h4>
+                    <ul style="color: var(--text-secondary); line-height: 1.6; padding-left: 1.5rem;">
+                        ${getDevTips(status.code)}
+                    </ul>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Get developer tips for specific status codes
+        function getDevTips(code) {
+            const tips = {
+                200: '<li>Always return 200 for successful GET requests</li><li>Include relevant data in response body</li><li>Consider caching headers for better performance</li>',
+                201: '<li>Include Location header with new resource URL</li><li>Return the created resource in response body</li><li>Use for POST requests that create resources</li>',
+                400: '<li>Provide clear error messages in response body</li><li>Include field-specific validation errors</li><li>Use consistent error response format</li>',
+                401: '<li>Include WWW-Authenticate header</li><li>Don\'t reveal whether user exists</li><li>Implement proper authentication flow</li>',
+                404: '<li>Create user-friendly 404 pages</li><li>Suggest alternative resources</li><li>Log for broken link analysis</li>',
+                418: '<li>Perfect for API testing and humor</li><li>Use in development environments</li><li>Great conversation starter in tech interviews!</li>',
+                500: '<li>Log detailed error information server-side</li><li>Never expose stack traces to users</li><li>Implement proper error monitoring</li>',
+                503: '<li>Include Retry-After header when possible</li><li>Use for planned maintenance</li><li>Implement graceful degradation</li>'
+            };
+            return tips[code] || '<li>Follow HTTP specification guidelines</li><li>Implement proper error handling</li><li>Consider user experience in error scenarios</li>';
+        }
+
+        // Close modal
+        function closeModalHandler() {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search functionality
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                filterStatusCodes();
+            });
+
+            // Filter buttons
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentFilter = e.target.dataset.category;
+                    filterStatusCodes();
+                });
+            });
+
+            // Modal controls
+            closeModal.addEventListener('click', closeModalHandler);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModalHandler();
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.style.display === 'block') {
+                    closeModalHandler();
+                }
+                if (e.key === '/' && e.target !== searchInput) {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        }
+
+        // Setup scroll progress indicator
+        function setupScrollIndicator() {
+            window.addEventListener('scroll', () => {
+                const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+                const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (winScroll / height) * 100;
+                scrollProgress.style.width = scrolled + "%";
+            });
+        }
+
+        // Advanced features
+        function addAdvancedFeatures() {
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.target === searchInput) return;
+                
+                const cards = Array.from(document.querySelectorAll('.status-card:not(.hidden)'));
+                const currentIndex = cards.findIndex(card => card.classList.contains('focused'));
+                
+                switch(e.key) {
+                    case 'ArrowDown':
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        focusCard(cards, currentIndex + 1);
+                        break;
+                    case 'ArrowUp':
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        focusCard(cards, currentIndex - 1);
+                        break;
+                    case 'Enter':
+                        if (currentIndex >= 0) {
+                            cards[currentIndex].click();
+                        }
+                        break;
+                }
+            });
+
+            // Random status code feature
+            const randomBtn = document.createElement('button');
+            randomBtn.className = 'filter-btn';
+            randomBtn.textContent = '🎲 Random';
+            randomBtn.addEventListener('click', () => {
+                const randomStatus = statusCodes[Math.floor(Math.random() * statusCodes.length)];
+                openModal(randomStatus);
+            });
+            document.querySelector('.filter-buttons').appendChild(randomBtn);
+        }
+
+        function focusCard(cards, index) {
+            cards.forEach(card => card.classList.remove('focused'));
+            if (index >= 0 && index < cards.length) {
+                cards[index].classList.add('focused');
+                cards[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // Performance optimization
+        function optimizePerformance() {
+            // Intersection Observer for lazy loading effects
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            // Observe all cards
+            document.querySelectorAll('.status-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+        }
+
+        // Initialize everything when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            addAdvancedFeatures();
+            setupEnhancedSearch();
+            
+            // Delay performance optimizations to avoid blocking initial render
+            setTimeout(optimizePerformance, 100);
+        });
+
+        // Export for potential testing/debugging
+        window.HTTPStatusVisualizer = {
+            statusCodes,
+            filterStatusCodes,
+            openModal,
+            currentFilter,
+            searchQuery
+        };
+    </script>
+</body>
+</html>
