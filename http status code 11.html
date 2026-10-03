@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Status Code Visualizer</title>
+    <meta name="description" content="Interactive visualization of HTTP status codes with detailed explanations, animations, and advanced filtering">
+    <meta name="theme-color" content="#667eea">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            --card-light: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            --card-dark: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            --text-light: #2d3748;
+            --text-dark: #e2e8f0;
+            --bg-light: #f7fafc;
+            --bg-dark: #1a202c;
+            --shadow-light: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --shadow-dark: 0 10px 30px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: var(--bg-dark);
+            --text-primary: var(--text-dark);
+            --card-bg: var(--card-dark);
+            --shadow: var(--shadow-dark);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: var(--bg-light);
+            --text-primary: var(--text-light);
+            --card-bg: var(--card-light);
+            --shadow: var(--shadow-light);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .app-container {
+            background: var(--bg-primary);
+            transition: var(--transition);
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-container {
+            max-width: 300px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .status-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #f9ca24);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .status-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .status-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-code {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-name {
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .status-description {
+            color: var(--text-primary);
+            opacity: 0.8;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .status-category {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .category-1xx { background: #e8f4fd; color: #1e88e5; }
+        .category-2xx { background: #e8f5e8; color: #43a047; }
+        .category-3xx { background: #fff3e0; color: #fb8c00; }
+        .category-4xx { background: #ffebee; color: #e53935; }
+        .category-5xx { background: #f3e5f5; color: #8e24aa; }
+
+        .visual-metaphor {
+            margin: 1.5rem 0;
+            text-align: center;
+            font-size: 4rem;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Special animations */
+        .bounce { animation: bounce 2s infinite; }
+        .spin { animation: spin 3s linear infinite; }
+        .pulse { animation: pulse 2s infinite; }
+        .shake { animation: shake 0.5s infinite; }
+        .wiggle { animation: wiggle 1s infinite; }
+        .tada { animation: tada 1.5s infinite; }
+        .heartbeat { animation: heartbeat 1.5s infinite; }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+            20%, 40%, 60%, 80% { transform: translateX(2px); }
+        }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(5deg); }
+            75% { transform: rotate(-5deg); }
+        }
+
+        @keyframes tada {
+            0% { transform: scale(1); }
+            10%, 20% { transform: scale(0.9) rotate(-3deg); }
+            30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
+            40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.3); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.3); }
+            70% { transform: scale(1); }
+        }
+
+        /* Special teapot styling */
+        .teapot-card {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            border: 3px solid #ff6b9d;
+            position: relative;
+        }
+
+        .teapot-card::after {
+            content: '✨';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5rem;
+            animation: pulse 1s infinite;
+        }
+
+        .teapot-visual {
+            font-size: 5rem;
+            animation: wiggle 2s infinite;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(8px); }
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 650px;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            margin: 2rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: modalSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalSlideIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(-50px) scale(0.9); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-primary);
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .modal-emoji {
+            font-size: 4rem;
+            margin-right: 1rem;
+        }
+
+        .modal-category {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-description {
+            line-height: 1.7;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+
+        .modal-details {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-top: 1.5rem;
+        }
+
+        .modal-details h3 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-item {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .usage-examples {
+            margin-top: 2rem;
+        }
+
+        .usage-examples h3 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .example-list {
+            list-style-type: none;
+        }
+
+        .example-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .example-list li:before {
+            content: '•';
+            color: #667eea;
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-right: 0.5rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-primary);
+        }
+
+        .no-results i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 2rem;
+            color: white;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .keyboard-shortcuts {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 1rem;
+            color: white;
+            font-size: 0.9rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0.7;
+            transition: var(--transition);
+        }
+
+        .keyboard-shortcuts:hover {
+            opacity: 1;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .shortcut-key {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 1rem;
+        }
+
+        .loading-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            z-index: 1001;
+            transition: width 0.4s ease;
+        }
+
+        /* Favorite star */
+        .favorite-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #ccc;
+            transition: var(--transition);
+            z-index: 10;
+        }
+
+        .favorite-btn.active {
+            color: gold;
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.2);
+        }
+
+        /* Quiz section */
+        .quiz-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .quiz-title {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        .quiz-question {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .quiz-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .quiz-option {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .quiz-option:hover {
+            background: rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .quiz-option.correct {
+            background: #e8f5e8;
+            color: #43a047;
+        }
+
+        .quiz-option.incorrect {
+            background: #ffebee;
+            color: #e53935;
+        }
+
+        .quiz-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quiz-score {
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            height: 10px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+
+        /* Network visualization */
+        .network-vis {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            margin: 2rem 0;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .client, .server {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            z-index: 2;
+        }
+
+        .client {
+            left: 20%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .server {
+            right: 20%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #764ba2;
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+        }
+
+        .request-line, .response-line {
+            position: absolute;
+            height: 3px;
+            background: #667eea;
+            top: 50%;
+            transform: translateY(-50%);
+            left: calc(20% + 60px);
+            width: 0;
+            transition: width 1s ease;
+        }
+
+        .response-line {
+            background: #764ba2;
+            left: auto;
+            right: calc(20% + 60px);
+            transform-origin: right center;
+        }
+
+        .request-packet, .response-packet {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            top: 50%;
+            transform: translateY(-50%);
+            left: calc(20% + 60px);
+            opacity: 0;
+            transition: left 1s ease, right 1s ease, opacity 0.3s ease;
+        }
+
+        .response-packet {
+            background: #764ba2;
+            left: auto;
+            right: calc(20% + 60px);
+        }
+
+        /* Print styles */
+        @media print {
+            .header, .controls, .theme-toggle, .footer, .keyboard-shortcuts, .favorite-btn {
+                display: none;
+            }
+            .gallery {
+                display: block;
+                padding: 0;
+            }
+            .status-card {
+                break-inside: avoid;
+                margin-bottom: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .gallery { grid-template-columns: 1fr; padding: 1rem; }
+            .controls { flex-direction: column; align-items: center; }
+            .modal-content { margin: 1rem; padding: 1.5rem; }
+            .modal-title { font-size: 2rem; }
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+
+        /* 3D Card effect */
+        .status-card-3d {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+
+        .status-card-3d:hover {
+            transform: rotateY(5deg) rotateX(5deg);
+        }
+
+        /* Particle effects */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Advanced search panel */
+        .advanced-search {
+            max-width: 300px;
+            margin: 1rem auto;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            color: white;
+        }
+
+        .advanced-search h3 {
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .search-option {
+            margin-bottom: 0.5rem;
+        }
+
+        .search-option label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Error boundary simulation */
+        .error-simulator {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 1rem;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .error-simulator select {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-bar" id="loadingBar"></div>
+    <div class="app-container" id="appContainer">
+        <div class="header">
+            <h1>HTTP Status Code Visualizer</h1>
+            <p>An interactive journey through the language of the web</p>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalCodes">0</div>
+                    <div class="stat-label">Status Codes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="visibleCodes">0</div>
+                    <div class="stat-label">Visible</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="categories">5</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="favorites">0</div>
+                    <div class="stat-label">Favorites</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="filter-btn active" data-filter="all">
+                    <i class="fas fa-layer-group"></i> All
+                </button>
+                <button class="filter-btn" data-filter="1xx">
+                    <i class="fas fa-info-circle"></i> 1xx Informational
+                </button>
+                <button class="filter-btn" data-filter="2xx">
+                    <i class="fas fa-check-circle"></i> 2xx Success
+                </button>
+                <button class="filter-btn" data-filter="3xx">
+                    <i class="fas fa-directions"></i> 3xx Redirection
+                </button>
+                <button class="filter-btn" data-filter="4xx">
+                    <i class="fas fa-exclamation-circle"></i> 4xx Client Error
+                </button>
+                <button class="filter-btn" data-filter="5xx">
+                    <i class="fas fa-server"></i> 5xx Server Error
+                </button>
+                <button class="filter-btn" data-filter="favorites" id="favoritesFilter">
+                    <i class="fas fa-star"></i> Favorites
+                </button>
+                <div class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search status codes..." id="searchInput">
+            </div>
+
+            <div class="advanced-search">
+                <h3>Advanced Filters</h3>
+                <div class="search-option">
+                    <label>
+                        <input type="checkbox" id="cacheableFilter"> Cacheable only
+                    </label>
+                </div>
+                <div class="search-option">
+                    <label>
+                        <input type="checkbox" id="rfcFilter"> RFC Standard
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="quiz-container" id="quizSection">
+            <h2 class="quiz-title">HTTP Status Code Quiz</h2>
+            <div class="progress-bar">
+                <div class="progress" id="quizProgress" style="width: 0%"></div>
+            </div>
+            <div class="quiz-question" id="quizQuestion">What does HTTP status code 200 mean?</div>
+            <div class="quiz-options" id="quizOptions">
+                <!-- Options will be populated by JavaScript -->
+            </div>
+            <div class="quiz-controls">
+                <div class="quiz-score" id="quizScore">Score: 0/0</div>
+                <button class="filter-btn" id="nextQuestionBtn">Next Question</button>
+            </div>
+        </div>
+
+        <div class="gallery" id="gallery"></div>
+
+        <div class="modal" id="modal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div id="modalContent"></div>
+            </div>
+        </div>
+
+        <div class="network-vis" id="networkVis">
+            <div class="client">👤</div>
+            <div class="server">🖥️</div>
+            <div class="request-line" id="requestLine"></div>
+            <div class="response-line" id="responseLine"></div>
+            <div class="request-packet" id="requestPacket"></div>
+            <div class="response-packet" id="responsePacket"></div>
+        </div>
+
+        <div class="footer">
+            <p>HTTP Status Code Visualizer &copy; 2023 | An interactive educational tool</p>
+            <p>Now with quizzes, network visualization, and advanced features!</p>
+        </div>
+
+        <div class="keyboard-shortcuts">
+            <h4>Keyboard Shortcuts</h4>
+            <div class="shortcut-item">
+                <span>0-5</span>
+                <span class="shortcut-key">Filter categories</span>
+            </div>
+            <div class="shortcut-item">
+                <span>/</span>
+                <span class="shortcut-key">Focus search</span>
+            </div>
+            <div class="shortcut-item">
+                <span>ESC</span>
+                <span class="shortcut-key">Close modal</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Q</span>
+                <span class="shortcut-key">Start quiz</span>
+            </div>
+        </div>
+
+        <div class="error-simulator">
+            <h4>Error Simulator</h4>
+            <select id="errorSelect">
+                <option value="">Select error to simulate</option>
+                <option value="400">400 - Bad Request</option>
+                <option value="404">404 - Not Found</option>
+                <option value="500">500 - Internal Server Error</option>
+                <option value="503">503 - Service Unavailable</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced status codes data with more details
+        const statusCodes = [
+            // 1xx Informational
+            { 
+                code: 100, 
+                name: 'Continue', 
+                description: 'The server has received the request headers and the client should proceed to send the request body.', 
+                emoji: '🏃', 
+                animation: 'bounce', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Large file uploads with Expect: 100-continue header'
+            },
+            { 
+                code: 101, 
+                name: 'Switching Protocols', 
+                description: 'The requester has asked the server to switch protocols and the server has agreed to do so.', 
+                emoji: '🔄', 
+                animation: 'spin', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'WebSocket connection upgrades'
+            },
+            { 
+                code: 102, 
+                name: 'Processing', 
+                description: 'The server has received and is processing the request, but no response is available yet.', 
+                emoji: '⚙️', 
+                animation: 'spin', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC2518',
+                methods: ['All'],
+                example: 'Long-running processing requests'
+            },
+            { 
+                code: 103, 
+                name: 'Early Hints', 
+                description: 'Used to return some response headers before final HTTP message.', 
+                emoji: '🔜', 
+                animation: 'pulse', 
+                category: '1xx',
+                cacheable: false,
+                rfc: 'RFC8297',
+                methods: ['All'],
+                example: 'Preloading resources while the server prepares the response'
+            },
+            
+            // 2xx Success
+            { 
+                code: 200, 
+                name: 'OK', 
+                description: 'Standard response for successful HTTP requests. The actual response will depend on the request method used.', 
+                emoji: '✅', 
+                animation: 'pulse', 
+                category: '2xx',
+                cacheable: true,
+                rfc: 'RFC7231',
+                methods: ['GET', 'POST', 'HEAD', 'PUT', 'DELETE'],
+                example: 'Successful retrieval of a resource'
+            },
+            { 
+                code: 201, 
+                name: 'Created', 
+                description: 'The request has been fulfilled, resulting in the creation of a new resource.', 
+                emoji: '🎉', 
+                animation: 'bounce', 
+                category: '2xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['POST', 'PUT'],
+                example: 'Resource created via POST request'
+            },
+            { 
+                code: 202, 
+                name: 'Accepted', 
+                description: 'The request has been accepted for processing, but the processing has not been completed.', 
+                emoji: '👍', 
+                animation: 'pulse', 
+                category: '2xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['POST', 'PUT', 'DELETE'],
+                example: 'Request accepted for asynchronous processing'
+            },
+            { 
+                code: 204, 
+                name: 'No Content', 
+                description: 'The server successfully processed the request, and is not returning any content.', 
+                emoji: '🤐', 
+                animation: '', 
+                category: '2xx',
+                cacheable: true,
+                rfc: 'RFC7231',
+                methods: ['PUT', 'DELETE'],
+                example: 'Successful deletion of a resource'
+            },
+            { 
+                code: 206, 
+                name: 'Partial Content', 
+                description: 'The server is delivering only part of the resource due to a range header sent by the client.', 
+                emoji: '🍕', 
+                animation: 'wiggle', 
+                category: '2xx',
+                cacheable: true,
+                rfc: 'RFC7233',
+                methods: ['GET'],
+                example: 'Resumable downloads or streaming media'
+            },
+            
+            // 3xx Redirection
+            { 
+                code: 301, 
+                name: 'Moved Permanently', 
+                description: 'This and all future requests should be directed to the given URI.', 
+                emoji: '📦', 
+                animation: 'bounce', 
+                category: '3xx',
+                cacheable: true,
+                rfc: 'RFC7231',
+                methods: ['GET'],
+                example: 'Website URL permanently changed'
+            },
+            { 
+                code: 302, 
+                name: 'Found', 
+                description: 'Tells the client to look at (browse to) another URL for the requested resource.', 
+                emoji: '🔍', 
+                animation: 'wiggle', 
+                category: '3xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['GET'],
+                example: 'Temporary redirect during maintenance'
+            },
+            { 
+                code: 304, 
+                name: 'Not Modified', 
+                description: 'Indicates that the resource has not been modified since the version specified by the request headers.', 
+                emoji: '📋', 
+                animation: '', 
+                category: '3xx',
+                cacheable: true,
+                rfc: 'RFC7232',
+                methods: ['GET'],
+                example: 'Cached resource is still valid'
+            },
+            { 
+                code: 307, 
+                name: 'Temporary Redirect', 
+                description: 'The request should be repeated with another URI; however, future requests should still use the original URI.', 
+                emoji: '🔀', 
+                animation: 'bounce', 
+                category: '3xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['GET', 'POST'],
+                example: 'Temporary redirect preserving method and body'
+            },
+            { 
+                code: 308, 
+                name: 'Permanent Redirect', 
+                description: 'The request and all future requests should be repeated using another URI.', 
+                emoji: '➡️', 
+                animation: 'bounce', 
+                category: '3xx',
+                cacheable: true,
+                rfc: 'RFC7538',
+                methods: ['GET', 'POST'],
+                example: 'Permanent redirect preserving method and body'
+            },
+            
+            // 4xx Client Error
+            { 
+                code: 400, 
+                name: 'Bad Request', 
+                description: 'The server cannot or will not process the request due to an apparent client error.', 
+                emoji: '❌', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Malformed request syntax'
+            },
+            { 
+                code: 401, 
+                name: 'Unauthorized', 
+                description: 'Authentication is required and has failed or has not yet been provided.', 
+                emoji: '🔐', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7235',
+                methods: ['All'],
+                example: 'Accessing protected resource without credentials'
+            },
+            { 
+                code: 403, 
+                name: 'Forbidden', 
+                description: 'The request was valid, but the server is refusing action due to lack of permissions.', 
+                emoji: '🚫', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'User doesn\'t have access to the resource'
+            },
+            { 
+                code: 404, 
+                name: 'Not Found', 
+                description: 'The requested resource could not be found but may be available in the future.', 
+                emoji: '🔍', 
+                animation: 'pulse', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Accessing a deleted or non-existent resource'
+            },
+            { 
+                code: 405, 
+                name: 'Method Not Allowed', 
+                description: 'A request method is not supported for the requested resource.', 
+                emoji: '🚷', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Using POST on a read-only resource'
+            },
+            { 
+                code: 406, 
+                name: 'Not Acceptable', 
+                description: 'The requested resource is capable of generating only content not acceptable according to the Accept headers sent in the request.', 
+                emoji: '🙅', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Requesting XML from an API that only returns JSON'
+            },
+            { 
+                code: 408, 
+                name: 'Request Timeout', 
+                description: 'The server timed out waiting for the request.', 
+                emoji: '⏰', 
+                animation: 'pulse', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Client took too long to send the request'
+            },
+            { 
+                code: 409, 
+                name: 'Conflict', 
+                description: 'Indicates that the request could not be processed because of conflict in the current state of the resource.', 
+                emoji: '⚔️', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['PUT', 'DELETE', 'PATCH'],
+                example: 'Editing a resource that has been modified by another user'
+            },
+            { 
+                code: 410, 
+                name: 'Gone', 
+                description: 'Indicates that the resource requested is no longer available and will not be available again.', 
+                emoji: '👻', 
+                animation: 'pulse', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Accessing a resource that has been permanently removed'
+            },
+            { 
+                code: 413, 
+                name: 'Payload Too Large', 
+                description: 'The request is larger than the server is willing or able to process.', 
+                emoji: '🐘', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['POST', 'PUT'],
+                example: 'Uploading a file that exceeds server limits'
+            },
+            { 
+                code: 414, 
+                name: 'URI Too Long', 
+                description: 'The URI provided was too long for the server to process.', 
+                emoji: '🔗', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['GET'],
+                example: 'URL with excessively long query parameters'
+            },
+            { 
+                code: 415, 
+                name: 'Unsupported Media Type', 
+                description: 'The request entity has a media type which the server or resource does not support.', 
+                emoji: '📺', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['POST', 'PUT'],
+                example: 'Uploading an unsupported file format'
+            },
+            { 
+                code: 418, 
+                name: 'I\'m a teapot', 
+                description: 'The server refuses the attempt to brew coffee with a teapot.', 
+                emoji: '🫖', 
+                animation: 'wiggle', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC2324',
+                methods: ['All'],
+                example: 'April Fools joke from the HTTP spec',
+                special: true
+            },
+            { 
+                code: 429, 
+                name: 'Too Many Requests', 
+                description: 'The user has sent too many requests in a given amount of time.', 
+                emoji: '🚦', 
+                animation: 'shake', 
+                category: '4xx',
+                cacheable: false,
+                rfc: 'RFC6585',
+                methods: ['All'],
+                example: 'Rate limiting on API requests'
+            },
+            
+            // 5xx Server Error
+            { 
+                code: 500, 
+                name: 'Internal Server Error', 
+                description: 'A generic error message when an unexpected condition was encountered.', 
+                emoji: '💥', 
+                animation: 'shake', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Server-side script crashing'
+            },
+            { 
+                code: 501, 
+                name: 'Not Implemented', 
+                description: 'The server either does not recognize the request method, or it lacks the ability to fulfill the request.', 
+                emoji: '🛠️', 
+                animation: 'shake', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Server doesn\'t support the requested functionality'
+            },
+            { 
+                code: 502, 
+                name: 'Bad Gateway', 
+                description: 'The server was acting as a gateway or proxy and received an invalid response from the upstream server.', 
+                emoji: '🔀', 
+                animation: 'shake', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Proxy server receiving invalid response'
+            },
+            { 
+                code: 503, 
+                name: 'Service Unavailable', 
+                description: 'The server is currently unavailable (because it is overloaded or down for maintenance).', 
+                emoji: '🔧', 
+                animation: 'pulse', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Server undergoing maintenance'
+            },
+            { 
+                code: 504, 
+                name: 'Gateway Timeout', 
+                description: 'The server was acting as a gateway or proxy and did not receive a timely response from the upstream server.', 
+                emoji: '⏰', 
+                animation: 'pulse', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Upstream server taking too long to respond'
+            },
+            { 
+                code: 505, 
+                name: 'HTTP Version Not Supported', 
+                description: 'The server does not support the HTTP protocol version used in the request.', 
+                emoji: '📡', 
+                animation: 'shake', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC7231',
+                methods: ['All'],
+                example: 'Using an unsupported HTTP version'
+            },
+            { 
+                code: 511, 
+                name: 'Network Authentication Required', 
+                description: 'The client needs to authenticate to gain network access.', 
+                emoji: '🌐', 
+                animation: 'pulse', 
+                category: '5xx',
+                cacheable: false,
+                rfc: 'RFC6585',
+                methods: ['All'],
+                example: 'Captive portals in hotels or airports'
+            }
+        ];
+
+        // App state
+        let state = {
+            currentFilter: 'all',
+            searchQuery: '',
+            favorites: JSON.parse(localStorage.getItem('favoriteStatusCodes')) || [],
+            theme: localStorage.getItem('theme') || 'light',
+            quiz: {
+                currentQuestion: 0,
+                score: 0,
+                questions: [
+                    {
+                        question: "What does HTTP status code 200 mean?",
+                        options: [
+                            "Success - The request has succeeded",
+                            "Redirect - The resource has moved",
+                            "Error - There was a server issue",
+                            "Info - The request is being processed"
+                        ],
+                        answer: 0
+                    },
+                    {
+                        question: "Which status code indicates 'Not Found'?",
+                        options: [
+                            "400 - Bad Request",
+                            "403 - Forbidden",
+                            "404 - Not Found",
+                            "500 - Internal Server Error"
+                        ],
+                        answer: 2
+                    },
+                    {
+                        question: "What is the purpose of 3xx status codes?",
+                        options: [
+                            "Indicate server errors",
+                            "Provide informational messages",
+                            "Signal successful requests",
+                            "Handle redirection"
+                        ],
+                        answer: 3
+                    },
+                    {
+                        question: "Which status code would you get for rate limiting?",
+                        options: [
+                            "400 - Bad Request",
+                            "403 - Forbidden",
+                            "429 - Too Many Requests",
+                            "503 - Service Unavailable"
+                        ],
+                        answer: 2
+                    },
+                    {
+                        question: "What does the status code 418 mean?",
+                        options: [
+                            "I'm a teapot",
+                            "Permission denied",
+                            "Payment required",
+                            "Request timeout"
+                        ],
+                        answer: 0
+                    }
+                ]
+            }
+        };
+
+        // DOM elements
+        const gallery = document.getElementById('gallery');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modalContent');
+        const searchInput = document.getElementById('searchInput');
+        const themeToggle = document.getElementById('themeToggle');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const favoritesFilter = document.getElementById('favoritesFilter');
+        const totalCodesElement = document.getElementById('totalCodes');
+        const visibleCodesElement = document.getElementById('visibleCodes');
+        const favoritesElement = document.getElementById('favorites');
+        const quizQuestion = document.getElementById('quizQuestion');
+        const quizOptions = document.getElementById('quizOptions');
+        const quizScore = document.getElementById('quizScore');
+        const quizProgress = document.getElementById('quizProgress');
+        const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+        const errorSelect = document.getElementById('errorSelect');
+
+        // Initialize the app
+        function init() {
+            // Set initial theme
+            document.documentElement.setAttribute('data-theme', state.theme);
+            themeToggle.innerHTML = state.theme === 'light' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+            
+            // Render status cards
+            renderStatusCards();
+            
+            // Update stats
+            updateStats();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Initialize quiz
+            initQuiz();
+            
+            // Simulate loading
+            simulateLoading();
+        }
+
+        // Render all status cards
+        function renderStatusCards() {
+            gallery.innerHTML = '';
+            
+            const filteredCodes = filterStatusCodes();
+            
+            if (filteredCodes.length === 0) {
+                gallery.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-search"></i>
+                        <h3>No status codes found</h3>
+                        <p>Try adjusting your search or filter criteria</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredCodes.forEach(status => {
+                const isFavorite = state.favorites.includes(status.code);
+                const card = document.createElement('div');
+                card.className = `status-card status-card-3d ${status.special ? 'teapot-card' : ''}`;
+                card.innerHTML = `
+                    <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-code="${status.code}">
+                        <i class="fas fa-star"></i>
+                    </button>
+                    <div class="status-code">${status.code}</div>
+                    <div class="status-name">${status.name}</div>
+                    <div class="visual-metaphor">
+                        <span class="${status.animation}">${status.emoji}</span>
+                    </div>
+                    <div class="status-description">${status.description}</div>
+                    <span class="status-category category-${status.category}">${status.category}</span>
+                `;
+                card.addEventListener('click', () => openModal(status));
+                gallery.appendChild(card);
+            });
+            
+            // Add event listeners to favorite buttons
+            document.querySelectorAll('.favorite-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(parseInt(btn.dataset.code));
+                });
+            });
+        }
+
+        // Filter status codes based on current state
+        function filterStatusCodes() {
+            return statusCodes.filter(status => {
+                // Filter by category
+                if (state.currentFilter !== 'all' && state.currentFilter !== 'favorites') {
+                    if (status.category !== state.currentFilter) return false;
+                }
+                
+                // Filter by favorites
+                if (state.currentFilter === 'favorites' && !state.favorites.includes(status.code)) {
+                    return false;
+                }
+                
+                // Filter by search query
+                if (state.searchQuery) {
+                    const query = state.searchQuery.toLowerCase();
+                    if (
+                        !status.code.toString().includes(query) &&
+                        !status.name.toLowerCase().includes(query) &&
+                        !status.description.toLowerCase().includes(query)
+                    ) {
+                        return false;
+                    }
+                }
+                
+                // Advanced filters
+                const cacheableFilter = document.getElementById('cacheableFilter').checked;
+                if (cacheableFilter && !status.cacheable) return false;
+                
+                const rfcFilter = document.getElementById('rfcFilter').checked;
+                if (rfcFilter && !status.rfc) return false;
+                
+                return true;
+            });
+        }
+
+        // Open modal with status code details
+        function openModal(status) {
+            // Animate network visualization
+            animateNetworkRequest(status.code);
+            
+            modalContent.innerHTML = `
+                <div class="modal-header">
+                    <span class="modal-emoji">${status.emoji}</span>
+                    <h2 class="modal-title">${status.code} ${status.name}</h2>
+                </div>
+                <span class="modal-category category-${status.category}">${status.category}</span>
+                <p class="modal-description">${status.description}</p>
+                
+                <div class="modal-details">
+                    <h3>Technical Details</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Category</div>
+                            <div class="detail-value">${getCategoryName(status.category)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Cacheable</div>
+                            <div class="detail-value">${status.cacheable ? 'Yes' : 'No'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">RFC</div>
+                            <div class="detail-value">${status.rfc || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Methods</div>
+                            <div class="detail-value">${status.methods.join(', ')}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="usage-examples">
+                    <h3>Common Usage</h3>
+                    <ul class="example-list">
+                        <li>${status.example}</li>
+                        ${getAdditionalExamples(status.code)}
+                    </ul>
+                </div>
+                
+                ${status.special ? `<div class="modal-details">
+                    <h3>✨ Special Note</h3>
+                    <p>This status code is an Easter egg from RFC 2324, which was an April Fools' joke about Hyper Text Coffee Pot Control Protocol.</p>
+                </div>` : ''}
+            `;
+            
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close modal
+        function closeModal() {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Toggle favorite status
+        function toggleFavorite(code) {
+            if (state.favorites.includes(code)) {
+                state.favorites = state.favorites.filter(c => c !== code);
+            } else {
+                state.favorites.push(code);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('favoriteStatusCodes', JSON.stringify(state.favorites));
+            
+            // Update UI
+            updateStats();
+            renderStatusCards();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const filteredCodes = filterStatusCodes();
+            
+            totalCodesElement.textContent = statusCodes.length;
+            visibleCodesElement.textContent = filteredCodes.length;
+            favoritesElement.textContent = state.favorites.length;
+        }
+
+        // Get category name from category code
+        function getCategoryName(category) {
+            const categories = {
+                '1xx': 'Informational',
+                '2xx': 'Success',
+                '3xx': 'Redirection',
+                '4xx': 'Client Error',
+                '5xx': 'Server Error'
+            };
+            
+            return categories[category] || 'Unknown';
+        }
+
+        // Get additional examples for specific status codes
+        function getAdditionalExamples(code) {
+            const examples = {
+                200: '<li>Successful API request returning data</li><li>Loading a webpage successfully</li>',
+                404: '<li>Accessing a deleted page</li><li>Typing a URL incorrectly</li>',
+                500: '<li>Database connection failure</li><li>Unhandled exception in server code</li>',
+                503: '<li>Server overloaded with requests</li><li>Scheduled maintenance window</li>'
+            };
+            
+            return examples[code] || '';
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Search input
+            searchInput.addEventListener('input', (e) => {
+                state.searchQuery = e.target.value;
+                renderStatusCards();
+                updateStats();
+            });
+            
+            // Filter buttons
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const filter = btn.dataset.filter;
+                    
+                    // Update active state
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Update state and re-render
+                    state.currentFilter = filter;
+                    renderStatusCards();
+                    updateStats();
+                });
+            });
+            
+            // Theme toggle
+            themeToggle.addEventListener('click', () => {
+                state.theme = state.theme === 'light' ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', state.theme);
+                themeToggle.innerHTML = state.theme === 'light' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+                localStorage.setItem('theme', state.theme);
+            });
+            
+            // Modal close
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Focus search on "/"
+                if (e.key === '/' && e.target !== searchInput) {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+                
+                // Close modal on ESC
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+                
+                // Number keys for filters
+                if (e.key >= '0' && e.key <= '5') {
+                    const filters = ['all', '1xx', '2xx', '3xx', '4xx', '5xx'];
+                    const filterIndex = parseInt(e.key);
+                    
+                    if (filterIndex >= 0 && filterIndex < filters.length) {
+                        state.currentFilter = filters[filterIndex];
+                        
+                        // Update active button
+                        filterButtons.forEach(btn => {
+                            btn.classList.toggle('active', btn.dataset.filter === state.currentFilter);
+                        });
+                        
+                        renderStatusCards();
+                        updateStats();
+                    }
+                }
+                
+                // Q for quiz
+                if (e.key.toLowerCase() === 'q') {
+                    document.getElementById('quizSection').scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+            
+            // Error simulator
+            errorSelect.addEventListener('change', (e) => {
+                const code = e.target.value;
+                if (code) {
+                    const status = statusCodes.find(s => s.code === parseInt(code));
+                    if (status) {
+                        openModal(status);
+                    }
+                    e.target.value = '';
+                }
+            });
+        }
+
+        // Initialize quiz
+        function initQuiz() {
+            updateQuiz();
+            
+            nextQuestionBtn.addEventListener('click', () => {
+                state.quiz.currentQuestion++;
+                if (state.quiz.currentQuestion >= state.quiz.questions.length) {
+                    // Quiz completed, reset
+                    state.quiz.currentQuestion = 0;
+                    state.quiz.score = 0;
+                }
+                updateQuiz();
+            });
+        }
+
+        // Update quiz display
+        function updateQuiz() {
+            const currentQ = state.quiz.questions[state.quiz.currentQuestion];
+            
+            quizQuestion.textContent = currentQ.question;
+            quizScore.textContent = `Score: ${state.quiz.score}/${state.quiz.currentQuestion}`;
+            quizProgress.style.width = `${(state.quiz.currentQuestion / state.quiz.questions.length) * 100}%`;
+            
+            // Clear options
+            quizOptions.innerHTML = '';
+            
+            // Add options
+            currentQ.options.forEach((option, index) => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'quiz-option';
+                optionElement.textContent = option;
+                optionElement.addEventListener('click', () => {
+                    // Check if answer is correct
+                    if (index === currentQ.answer) {
+                        optionElement.classList.add('correct');
+                        state.quiz.score++;
+                    } else {
+                        optionElement.classList.add('incorrect');
+                        // Highlight correct answer
+                        quizOptions.children[currentQ.answer].classList.add('correct');
+                    }
+                    
+                    // Disable further selections
+                    Array.from(quizOptions.children).forEach(opt => {
+                        opt.style.pointerEvents = 'none';
+                    });
+                    
+                    // Update score
+                    quizScore.textContent = `Score: ${state.quiz.score}/${state.quiz.currentQuestion + 1}`;
+                });
+                
+                quizOptions.appendChild(optionElement);
+            });
+            
+            // Update next button text
+            nextQuestionBtn.textContent = state.quiz.currentQuestion < state.quiz.questions.length - 1 ? 
+                'Next Question' : 'Restart Quiz';
+        }
+
+        // Animate network request visualization
+        function animateNetworkRequest(statusCode) {
+            const requestLine = document.getElementById('requestLine');
+            const responseLine = document.getElementById('responseLine');
+            const requestPacket = document.getElementById('requestPacket');
+            const responsePacket = document.getElementById('responsePacket');
+            
+            // Reset animation
+            requestLine.style.width = '0';
+            responseLine.style.width = '0';
+            requestPacket.style.opacity = '0';
+            responsePacket.style.opacity = '0';
+            
+            // Determine animation timing based on status code
+            let delay = 1000;
+            if (statusCode >= 500) {
+                delay = 2000; // Server errors are slower
+            } else if (statusCode >= 400) {
+                delay = 1500; // Client errors are medium
+            }
+            
+            // Animate request
+            setTimeout(() => {
+                requestLine.style.width = '60%';
+                requestPacket.style.opacity = '1';
+                requestPacket.style.left = 'calc(80% - 10px)';
+                
+                // Animate response after another delay
+                setTimeout(() => {
+                    responseLine.style.width = '60%';
+                    responsePacket.style.opacity = '1';
+                    responsePacket.style.right = 'calc(80% - 10px)';
+                }, delay);
+            }, 500);
+        }
+
+        // Simulate loading progress
+        function simulateLoading() {
+            const loadingBar = document.getElementById('loadingBar');
+            let width = 0;
+            
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    loadingBar.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingBar.style.display = 'none';
+                    }, 500);
+                } else {
+                    width += 10;
+                    loadingBar.style.width = width + '%';
+                }
+            }, 100);
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
